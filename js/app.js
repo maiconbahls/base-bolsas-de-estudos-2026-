@@ -89,14 +89,25 @@ document.getElementById('loginForm')?.addEventListener('submit', (e) => {
 function logout() { sessionStorage.removeItem('logged'); location.reload(); }
 
 function showApp() {
-    document.getElementById('login-modal').classList.add('hidden');
-    document.getElementById('app-header').classList.remove('hidden-section');
-    document.getElementById('app-container').classList.remove('hidden-section');
-    setTimeout(() => {
-        document.getElementById('app-content').style.opacity = '1';
-        navigateTo('dashboard');
-        autoConnect();
-    }, 50);
+    try {
+        const modal = document.getElementById('login-modal');
+        const header = document.getElementById('app-header');
+        const container = document.getElementById('app-container');
+
+        if (modal) modal.classList.add('hidden');
+        if (header) header.classList.remove('hidden-section');
+        if (container) container.classList.remove('hidden-section');
+
+        setTimeout(() => {
+            const content = document.getElementById('app-content');
+            if (content) content.style.opacity = '1';
+            navigateTo('dashboard');
+            autoConnect();
+        }, 50);
+    } catch (err) {
+        console.error('Erro ao iniciar app:', err);
+        showToast('Erro ao carregar o sistema. Verifique os dados.', 'error');
+    }
 }
 
 // --------------- NAVIGATION ---------------
@@ -438,6 +449,7 @@ function renderCharts(baseList, safra) {
             }
         });
     }
+    // Finalize renderCharts
 }
 
 function destroyChart(id) {
@@ -926,30 +938,28 @@ function openProfile(mat) {
     }
 }
 
+// Função toggle unificada (Removida a duplicata do fim do arquivo)
 function toggleEvolucaoView() {
     const g1 = document.getElementById('container-evolucao-grafico');
     const g2 = document.getElementById('container-evolucao-qtd');
     const t = document.getElementById('container-evolucao-tabela');
     const b = document.getElementById('btn-toggle-evolucao');
 
+    if (!g1 || !t || !b) return;
+
+    // Se estiver mostrando o gráfico principal, vai para a tabela
     if (!g1.classList.contains('hidden')) {
-        // Mode 1 to Mode 2 (Quantity Chart)
         g1.classList.add('hidden');
-        g2.classList.remove('hidden');
-        t.classList.add('hidden');
-        b.innerHTML = '<i class="fa-solid fa-table"></i><span>Ver Tabela</span>';
-    } else if (!g2.classList.contains('hidden')) {
-        // Mode 2 to Mode 3 (Table)
-        g1.classList.add('hidden');
-        g2.classList.add('hidden');
+        if (g2) g2.classList.add('hidden');
         t.classList.remove('hidden');
-        b.innerHTML = '<i class="fa-solid fa-chart-column"></i><span>Ver Investimento</span>';
+        b.innerHTML = '<i class="fa-solid fa-chart-line"></i><span>Ver Gráfico</span>';
+        if (typeof renderTabelaEvolucao === 'function') renderTabelaEvolucao();
     } else {
-        // Mode 3 to Mode 1 (Investment Chart)
-        g1.classList.remove('hidden');
-        g2.classList.add('hidden');
+        // Se estiver na tabela, volta para o gráfico principal
         t.classList.add('hidden');
-        b.innerHTML = '<i class="fa-solid fa-chart-line"></i><span>Ver Quantidade</span>';
+        if (g2) g2.classList.add('hidden');
+        g1.classList.remove('hidden');
+        b.innerHTML = '<i class="fa-solid fa-table"></i><span>Ver Tabela</span>';
     }
 }
 
@@ -1040,16 +1050,7 @@ function togglePresentationMode() {
     }
 }
 
-function toggleEvolucaoView() {
-    const g = document.getElementById('container-evolucao-grafico'), t = document.getElementById('container-evolucao-tabela'), b = document.getElementById('btn-toggle-evolucao');
-    if (!g.classList.contains('hidden')) {
-        g.classList.add('hidden'); t.classList.remove('hidden'); b.innerHTML = '<i class="fa-solid fa-chart-column"></i><span>Ver Gráfico</span>';
-        if (typeof renderTabelaEvolucao === 'function') renderTabelaEvolucao();
-    } else {
-        g.classList.remove('hidden'); t.classList.add('hidden'); b.innerHTML = '<i class="fa-solid fa-table"></i><span>Ver Tabela</span>';
 
-    }
-}
 
 function triggerImport(id) { document.getElementById(`input-${id === 'base' ? 'base-bolsas' : (id === 'sucessao' ? 'sucessao' : 'penalidades')}`).click(); }
 
