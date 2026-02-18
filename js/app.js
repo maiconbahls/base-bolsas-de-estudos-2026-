@@ -164,6 +164,32 @@ function refreshDashboard() {
     window.headcountRawData = headcountRawData;
     window.organograma = organograma;
 
+    // Populate the table view as well
+    const tableBody = document.getElementById('tableEvolucaoMensal');
+    if (tableBody) {
+        const keys = Object.keys(dadosPorMes).sort();
+        let html = '';
+        let totalV = 0, totalQ = 0;
+        keys.forEach(k => {
+            const d = dadosPorMes[k];
+            totalV += d.valor;
+            totalQ += d.quantidade;
+            const avg = d.quantidade > 0 ? d.valor / d.quantidade : 0;
+            const [ano, mes] = k.split('-');
+            const label = `${MESES_ABR[parseInt(mes) - 1]}/${ano.substring(2)}`;
+            html += `<tr>
+                <td class="py-3 px-4 font-bold text-slate-700">${label}</td>
+                <td class="py-3 px-4 text-right font-black text-slate-900">${formatBRL(d.valor)}</td>
+                <td class="py-3 px-4 text-right font-black text-slate-600">${d.quantidade}</td>
+                <td class="py-3 px-4 text-right font-bold text-slate-500">${formatBRL(avg)}</td>
+            </tr>`;
+        });
+        tableBody.innerHTML = html || '<tr><td colspan="4" class="py-10 text-center text-slate-400">Sem dados no período</td></tr>';
+        if (document.getElementById('totalValor')) document.getElementById('totalValor').textContent = formatBRL(totalV);
+        if (document.getElementById('totalQtd')) document.getElementById('totalQtd').textContent = totalQ;
+        if (document.getElementById('totalMedia')) document.getElementById('totalMedia').textContent = formatBRL(totalQ > 0 ? totalV / totalQ : 0);
+    }
+
     if (document.getElementById('container-evolucao-grafico')?.classList.contains('hidden')) {
         if (typeof renderTabelaEvolucao === 'function') renderTabelaEvolucao();
     }
@@ -299,6 +325,53 @@ function renderCharts(baseList, safra) {
                             return max > 0 ? max * 3.5 : 5; // Positions the line markers lower (more towards the middle)
                         }
                     }
+                }
+            }
+        });
+    }
+
+    const canvasQtd = destroyChart('chartQtdEvolucao');
+    if (canvasQtd) {
+        // Reuse data calculated above
+        const dadosMes = {};
+        const relevantMats = new Set(baseList.map(b => b.matricula));
+        let pgsGraf = pagamentos.filter(p => relevantMats.has(p.matricula));
+        if (safra !== 'todas') {
+            const [aI, aF] = safra.split('/').map(Number);
+            pgsGraf = pgsGraf.filter(p => (p.ano === aI && p.mes >= 4) || (p.ano === aF && p.mes <= 3));
+        }
+
+        pgsGraf.forEach(p => {
+            const key = p.ano + '-' + String(p.mes).padStart(2, '0');
+            if (!dadosMes[key]) dadosMes[key] = { q: 0 };
+            dadosMes[key].q++;
+        });
+
+        const keys = Object.keys(dadosMes).sort();
+        charts.chartQtdEvolucao = new Chart(canvasQtd, {
+            type: 'line',
+            data: {
+                labels: keys.map(k => `${MESES_ABR[parseInt(k.split('-')[1]) - 1]}/${k.split('-')[0].substring(2)}`),
+                datasets: [{
+                    label: 'Quantidade de Pagamentos',
+                    data: keys.map(k => dadosMes[k].q),
+                    borderColor: '#1e293b',
+                    backgroundColor: '#1e293b22',
+                    borderWidth: 4,
+                    pointRadius: 6,
+                    pointBackgroundColor: '#1e293b',
+                    fill: true,
+                    tension: 0.3,
+                    datalabels: { align: 'top', font: { weight: '900' } }
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { display: false }, ticks: { display: false } },
+                    x: { grid: { display: false } }
                 }
             }
         });
@@ -843,6 +916,33 @@ function openProfile(mat) {
                 }
             }
         });
+    }
+}
+
+function toggleEvolucaoView() {
+    const g1 = document.getElementById('container-evolucao-grafico');
+    const g2 = document.getElementById('container-evolucao-qtd');
+    const t = document.getElementById('container-evolucao-tabela');
+    const b = document.getElementById('btn-toggle-evolucao');
+
+    if (!g1.classList.contains('hidden')) {
+        // Mode 1 to Mode 2 (Quantity Chart)
+        g1.classList.add('hidden');
+        g2.classList.remove('hidden');
+        t.classList.add('hidden');
+        b.innerHTML = '<i class="fa-solid fa-table"></i><span>Ver Tabela</span>';
+    } else if (!g2.classList.contains('hidden')) {
+        // Mode 2 to Mode 3 (Table)
+        g1.classList.add('hidden');
+        g2.classList.add('hidden');
+        t.classList.remove('hidden');
+        b.innerHTML = '<i class="fa-solid fa-chart-column"></i><span>Ver Investimento</span>';
+    } else {
+        // Mode 3 to Mode 1 (Investment Chart)
+        g1.classList.remove('hidden');
+        g2.classList.add('hidden');
+        t.classList.add('hidden');
+        b.innerHTML = '<i class="fa-solid fa-chart-line"></i><span>Ver Quantidade</span>';
     }
 }
 
