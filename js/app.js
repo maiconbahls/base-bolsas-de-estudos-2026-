@@ -290,7 +290,7 @@ function renderCharts(baseList, safra) {
                         grid: { display: false },
                         suggestedMax: (context) => {
                             const max = Math.max(...context.chart.data.datasets[0].data);
-                            return max * 2.2; // Positions the line more towards the middle
+                            return max > 0 ? max * 3.5 : 5; // Positions the line markers lower (more towards the middle)
                         }
                     }
                 }
