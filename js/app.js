@@ -49,6 +49,14 @@ document.addEventListener('DOMContentLoaded', () => {
     Chart.defaults.font.weight = '700';
     loadFromStorage();
     if (sessionStorage.getItem('logged') === 'true') showApp();
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === '1') {
+            e.preventDefault();
+            if (typeof togglePresentationMode === 'function') togglePresentationMode();
+        }
+    });
 });
 
 // --------------- NOTIFICAÇÕES ---------------
@@ -203,6 +211,12 @@ function renderCharts(baseList, safra) {
         const dadosMes = {};
         const relevantMats = new Set(baseList.map(b => b.matricula));
         let pgsGraf = pagamentos.filter(p => relevantMats.has(p.matricula));
+
+        // Handle Filtering logic consistent with toggle_evolucao.js
+        const norm = (s) => String(s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+        const dirSelection = document.getElementById('filtro-diretoria')?.value || 'todas';
+        const dirAlvo = norm(dirSelection);
+
         if (safra !== 'todas') {
             const [aI, aF] = safra.split('/').map(Number);
             pgsGraf = pgsGraf.filter(p => (p.ano === aI && p.mes >= 4) || (p.ano === aF && p.mes <= 3));
@@ -210,61 +224,89 @@ function renderCharts(baseList, safra) {
 
         pgsGraf.forEach(p => {
             const key = p.ano + '-' + String(p.mes).padStart(2, '0');
-            if (!dadosMes[key]) dadosMes[key] = { v: 0, q: 0 };
+            if (!dadosMes[key]) dadosMes[key] = { v: 0, q: 0, hc: 0 };
             dadosMes[key].v += (parseFloat(p.valor) || 0);
             dadosMes[key].q++;
         });
 
-
-
-
         const keys = Object.keys(dadosMes).sort();
+
+        // --- Headcount Logic ---
+        let filteredHC = (headcountRawData || []);
+        if (dirAlvo !== 'TODAS' && filteredHC.length > 0 && typeof organograma !== 'undefined') {
+            const orgMap = {};
+            organograma.forEach(item => {
+                const r = {}; for (const [k, v] of Object.entries(item)) r[normalizeCol(k)] = v;
+                const code = String(r.COD_LOCAL || '').trim();
+                if (code) orgMap[code] = norm(r.DIRETORIA);
+            });
+            filteredHC = filteredHC.filter(hr => {
+                let code = hr.cod_local; if (!code) return false;
+                let dir = ''; let p = code.split('.');
+                while (p.length > 0 && !dir) { dir = orgMap[p.join('.')]; p.pop(); }
+                return dir === dirAlvo;
+            });
+        }
+
+        keys.forEach(k => {
+            const matching = filteredHC.filter(hr => {
+                const status = (hr.statuses && hr.statuses[k]) ? String(hr.statuses[k]).toUpperCase() : '';
+                return (status === '1' || status.includes('ATIVO')) && !status.includes('INATIVO');
+            });
+            dadosMes[k].hc = matching.length;
+        });
+
         charts.chartValorVsQtd = new Chart(canvasEv, {
             type: 'bar',
             data: {
                 labels: keys.map(k => `${MESES_ABR[parseInt(k.split('-')[1]) - 1]}/${k.split('-')[0].substring(2)}`),
                 datasets: [
                     {
-                        label: 'Quantidade de Reembolso',
+                        label: 'Pagamentos Realizados',
                         type: 'line',
                         data: keys.map(k => dadosMes[k].q),
                         borderColor: '#1e293b',
+                        backgroundColor: '#1e293b',
                         borderWidth: 3,
                         pointBackgroundColor: '#1e293b',
-                        pointBorderColor: '#ffffff', // White border for contrast
+                        pointBorderColor: '#ffffff',
                         pointBorderWidth: 2,
-                        pointRadius: 6,
-                        pointHoverRadius: 8,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
                         fill: false,
-                        tension: 0.1, // Slight curve for modern look
+                        tension: 0.3,
                         order: 1,
                         yAxisID: 'y1',
                         datalabels: {
                             align: 'top',
-                            anchor: 'center',
                             offset: 6,
                             formatter: (v) => v > 0 ? v : '',
-                            font: { size: 12, weight: '900' },
+                            font: { size: 10, weight: '900' },
                             color: '#1e293b'
                         }
                     },
                     {
-                        label: 'Valor de Reembolso',
-                        type: 'bar',
-                        data: keys.map(k => dadosMes[k].v),
-                        backgroundColor: '#76B82A',
-                        borderRadius: 6,
-                        barPercentage: 0.9,
-                        categoryPercentage: 0.9,
+                        label: 'Ativos (Headcount)',
+                        type: 'line',
+                        data: keys.map(k => dadosMes[k].hc),
+                        borderColor: '#76B82A',
+                        backgroundColor: '#76B82A15',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#76B82A',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        fill: true,
+                        tension: 0.3,
                         order: 2,
                         yAxisID: 'y',
                         datalabels: {
-                            align: 'end',
-                            anchor: 'end',
-                            offset: 0,
-                            formatter: (v) => v > 0 ? 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
+                            align: 'bottom',
+                            offset: 6,
+                            formatter: (v) => v > 0 ? v : '',
                             font: { size: 10, weight: '900' },
-                            color: '#1e293b'
+                            color: '#76B82A'
                         }
                     }
                 ]
@@ -272,165 +314,131 @@ function renderCharts(baseList, safra) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                layout: { padding: { top: 30, left: 10, right: 10, bottom: 0 } },
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
+                layout: { padding: { top: 40, left: 10, right: 10, bottom: 0 } },
                 plugins: {
                     legend: { display: false },
-                    datalabels: {
-                        display: true
-                    },
-                    tooltip: {
-                        enabled: true,
-                        backgroundColor: '#1e293b',
-                        titleFont: { size: 13, weight: '700' },
-                        bodyFont: { size: 12 },
-                        padding: 12,
-                        cornerRadius: 8,
-                        displayColors: true,
-                        boxPadding: 4
-                    }
+                    datalabels: { display: true },
+                    tooltip: { enabled: true }
                 },
                 scales: {
-                    x: {
-                        grid: { display: false, drawBorder: false },
-                        ticks: {
-                            font: { size: 11, weight: '600' },
-                            color: '#64748b',
-                            padding: 10
-                        },
-                        border: { display: false }
-                    },
+                    x: { grid: { display: false }, ticks: { font: { weight: '600' } } },
                     y: {
-                        type: 'linear',
                         display: false,
-                        position: 'left',
                         beginAtZero: true,
-                        grid: { display: false },
-                        suggestedMax: (context) => {
-                            const max = Math.max(...context.chart.data.datasets[1].data);
-                            return max * 1.08; // Even more aggressive stretching
-                        }
+                        suggestedMax: (ctx) => Math.max(...ctx.chart.data.datasets[1].data) * 1.2
                     },
                     y1: {
-                        type: 'linear',
                         display: false,
-                        position: 'right',
                         beginAtZero: true,
-                        grid: { display: false },
-                        suggestedMax: (context) => {
-                            const max = Math.max(...context.chart.data.datasets[0].data);
-                            return max > 0 ? max * 3.5 : 5; // Positions the line markers lower (more towards the middle)
-                        }
+                        suggestedMax: (ctx) => Math.max(...ctx.chart.data.datasets[0].data) * 2.5
                     }
                 }
             }
         });
     }
+}
 
-    const canvasQtd = destroyChart('chartQtdEvolucao');
-    if (canvasQtd) {
-        // Reuse data calculated above
-        const dadosMes = {};
-        const relevantMats = new Set(baseList.map(b => b.matricula));
-        let pgsGraf = pagamentos.filter(p => relevantMats.has(p.matricula));
-        if (safra !== 'todas') {
-            const [aI, aF] = safra.split('/').map(Number);
-            pgsGraf = pgsGraf.filter(p => (p.ano === aI && p.mes >= 4) || (p.ano === aF && p.mes <= 3));
+const canvasQtd = destroyChart('chartQtdEvolucao');
+if (canvasQtd) {
+    // Reuse data calculated above
+    const dadosMes = {};
+    const relevantMats = new Set(baseList.map(b => b.matricula));
+    let pgsGraf = pagamentos.filter(p => relevantMats.has(p.matricula));
+    if (safra !== 'todas') {
+        const [aI, aF] = safra.split('/').map(Number);
+        pgsGraf = pgsGraf.filter(p => (p.ano === aI && p.mes >= 4) || (p.ano === aF && p.mes <= 3));
+    }
+
+    pgsGraf.forEach(p => {
+        const key = p.ano + '-' + String(p.mes).padStart(2, '0');
+        if (!dadosMes[key]) dadosMes[key] = { q: 0 };
+        dadosMes[key].q++;
+    });
+
+    const keys = Object.keys(dadosMes).sort();
+    charts.chartQtdEvolucao = new Chart(canvasQtd, {
+        type: 'line',
+        data: {
+            labels: keys.map(k => `${MESES_ABR[parseInt(k.split('-')[1]) - 1]}/${k.split('-')[0].substring(2)}`),
+            datasets: [{
+                label: 'Quantidade de Pagamentos',
+                data: keys.map(k => dadosMes[k].q),
+                borderColor: '#1e293b',
+                backgroundColor: '#1e293b22',
+                borderWidth: 4,
+                pointRadius: 6,
+                pointBackgroundColor: '#1e293b',
+                fill: true,
+                tension: 0.3,
+                datalabels: { align: 'top', font: { weight: '900' } }
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { display: false }, ticks: { display: false } },
+                x: { grid: { display: false } }
+            }
         }
+    });
+}
 
-        pgsGraf.forEach(p => {
-            const key = p.ano + '-' + String(p.mes).padStart(2, '0');
-            if (!dadosMes[key]) dadosMes[key] = { q: 0 };
-            dadosMes[key].q++;
-        });
-
-        const keys = Object.keys(dadosMes).sort();
-        charts.chartQtdEvolucao = new Chart(canvasQtd, {
-            type: 'line',
-            data: {
-                labels: keys.map(k => `${MESES_ABR[parseInt(k.split('-')[1]) - 1]}/${k.split('-')[0].substring(2)}`),
-                datasets: [{
-                    label: 'Quantidade de Pagamentos',
-                    data: keys.map(k => dadosMes[k].q),
-                    borderColor: '#1e293b',
-                    backgroundColor: '#1e293b22',
-                    borderWidth: 4,
-                    pointRadius: 6,
-                    pointBackgroundColor: '#1e293b',
-                    fill: true,
-                    tension: 0.3,
-                    datalabels: { align: 'top', font: { weight: '900' } }
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, grid: { display: false }, ticks: { display: false } },
-                    x: { grid: { display: false } }
-                }
-            }
-        });
-    }
-
-    const canvasSit = destroyChart('chartSituacoes');
-    if (canvasSit) {
-        const counts = {};
-        const filteredList = baseList.filter(b => isBolsistaInSafra(b, safra));
-        filteredList.forEach(b => {
-            const sit = (b.checagem || b.situacao || 'OUTROS').toUpperCase().trim();
-            counts[sit] = (counts[sit] || 0) + 1;
-        });
-        const labels = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-        charts.chartSituacoes = new Chart(canvasSit, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: labels.map(l => counts[l]),
-                    backgroundColor: labels.map(l => (['REGULAR', 'ATIVO'].includes(l)) ? '#76B82A' : '#f59e0b'),
-                    borderRadius: 5, barThickness: 18
-                }]
-            },
-            options: {
-                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                layout: { padding: { right: 80 } }, // Give space for the "X BOLSISTAS" label
-                onClick: (event, elements) => {
-                    if (elements && elements.length > 0) {
-                        const index = elements[0].index;
-                        const label = labels[index];
-                        if (typeof filterTableBySituation === 'function') {
-                            filterTableBySituation(label);
-                        }
-                    }
-                },
-                onHover: (event, elements) => {
-                    event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
-                },
-                plugins: {
-                    legend: { display: false },
-                    datalabels: {
-                        anchor: 'end',
-                        align: 'end',
-                        formatter: (v) => `${v} BOLSISTAS`,
-                        font: { size: 10, weight: '900' },
-                        color: '#1e293b'
-                    }
-                },
-                scales: {
-                    x: { display: false, beginAtZero: true },
-                    y: {
-                        grid: { display: false },
-                        ticks: { font: { size: 9, weight: '800' }, color: '#64748b' }
+const canvasSit = destroyChart('chartSituacoes');
+if (canvasSit) {
+    const counts = {};
+    const filteredList = baseList.filter(b => isBolsistaInSafra(b, safra));
+    filteredList.forEach(b => {
+        const sit = (b.checagem || b.situacao || 'OUTROS').toUpperCase().trim();
+        counts[sit] = (counts[sit] || 0) + 1;
+    });
+    const labels = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    charts.chartSituacoes = new Chart(canvasSit, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: labels.map(l => counts[l]),
+                backgroundColor: labels.map(l => (['REGULAR', 'ATIVO'].includes(l)) ? '#76B82A' : '#f59e0b'),
+                borderRadius: 5, barThickness: 18
+            }]
+        },
+        options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            layout: { padding: { right: 80 } }, // Give space for the "X BOLSISTAS" label
+            onClick: (event, elements) => {
+                if (elements && elements.length > 0) {
+                    const index = elements[0].index;
+                    const label = labels[index];
+                    if (typeof filterTableBySituation === 'function') {
+                        filterTableBySituation(label);
                     }
                 }
+            },
+            onHover: (event, elements) => {
+                event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+            },
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'end',
+                    formatter: (v) => `${v} BOLSISTAS`,
+                    font: { size: 10, weight: '900' },
+                    color: '#1e293b'
+                }
+            },
+            scales: {
+                x: { display: false, beginAtZero: true },
+                y: {
+                    grid: { display: false },
+                    ticks: { font: { size: 9, weight: '800' }, color: '#64748b' }
+                }
             }
-        });
-    }
+        }
+    });
+}
 }
 
 function destroyChart(id) {
@@ -1021,16 +1029,15 @@ function renderSituacaoTable(list, safra) {
 function togglePresentationMode() {
     const isPresentation = document.body.classList.toggle('presentation-mode');
     const header = document.getElementById('app-header');
-    const btn = document.getElementById('btn-presentation');
 
     if (isPresentation) {
         if (header) header.style.display = 'none';
-        if (btn) btn.innerHTML = '<i class="fa-solid fa-compress"></i><span>Sair da Apresentação</span>';
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+        showToast('Modo Apresentação Ativado (CTRL+1 para sair)', 'success');
     } else {
         if (header) header.style.display = 'flex';
-        if (btn) btn.innerHTML = '<i class="fa-solid fa-expand"></i><span>Modo Apresentação</span>';
-        if (document.exitFullscreen) document.exitFullscreen();
+        if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen();
+        showToast('Modo Apresentação Desativado', 'success');
     }
 }
 
