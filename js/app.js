@@ -117,23 +117,29 @@ function refreshDashboard() {
     // KPI 1: Bolsistas Ativos (Strictly SITUACAO=ATIVO)
     if (document.getElementById('kpi-ativos')) document.getElementById('kpi-ativos').textContent = ativosNaSafra.length;
 
-    // KPI 2: Pendência Pagto (SITUACAO=ATIVO and CHECAGEM=REGULAR)
+    // KPI 2: Pendência Pagto (SITUACAO=ATIVO and CHECAGEM NÃO REGULAR)
     if (document.getElementById('kpi-novos')) {
-        const pendentes = ativosNaSafra.filter(b => norm(b.checagem) === 'REGULAR');
+        const pendentes = ativosNaSafra.filter(b => norm(b.checagem) !== 'REGULAR');
         document.getElementById('kpi-novos').textContent = pendentes.length;
     }
 
-    // Investment Logic (Based on payments in filtered Safra/Diretoria)
-    const listForInv = (dirSelection === 'todas') ? bolsistas : bolsistas.filter(b => norm(b.diretoria) === norm(dirSelection));
-    const matsInDir = new Set(listForInv.map(b => b.matricula));
-
-    let pgsList = pagamentos.filter(p => matsInDir.has(p.matricula));
-    if (safra !== 'todas') {
-        const [aI, aF] = safra.split('/').map(Number);
-        pgsList = pgsList.filter(p => (p.ano === aI && p.mes >= 4) || (p.ano === aF && p.mes <= 3));
+    // Investment Logic: Sum all payments in the base that fall within the Safra
+    let pgsListTotal = [];
+    if (dirSelection === 'todas') {
+        pgsListTotal = pagamentos; // Use all historical payments to match Excel base total
+    } else {
+        const listForInv = bolsistas.filter(b => norm(b.diretoria) === norm(dirSelection));
+        const matsInDir = new Set(listForInv.map(b => b.matricula));
+        pgsListTotal = pagamentos.filter(p => matsInDir.has(p.matricula));
     }
 
-    const totalInv = pgsList.reduce((acc, p) => acc + (parseFloat(p.valor) || 0), 0);
+    // Apply Safra filter to the payments
+    if (safra !== 'todas') {
+        const [aI, aF] = safra.split('/').map(Number);
+        pgsListTotal = pgsListTotal.filter(p => (p.ano === aI && p.mes >= 4) || (p.ano === aF && p.mes <= 3));
+    }
+
+    const totalInv = pgsListTotal.reduce((acc, p) => acc + (parseFloat(p.valor) || 0), 0);
     if (document.getElementById('kpi-ticket')) document.getElementById('kpi-ticket').textContent = formatBRL(totalInv);
 
     // Render Charts and other stats
@@ -142,7 +148,7 @@ function refreshDashboard() {
     renderSituacaoTable(ativosFiltrados, safra);
 
     const dadosPorMes = {};
-    pgsList.forEach(p => {
+    pgsListTotal.forEach(p => {
         const key = `${p.ano}-${String(p.mes).padStart(2, '0')}`;
         if (!dadosPorMes[key]) dadosPorMes[key] = { quantidade: 0, valor: 0 };
         dadosPorMes[key].quantidade++;
@@ -458,18 +464,30 @@ function processBolsasBase(data) {
 
 function processPagamentosBase(data) {
     const wb = XLSX.read(data, { type: 'array', cellDates: true });
-    const sName = wb.SheetNames.includes('PAGAMENTOS') ? 'PAGAMENTOS' : wb.SheetNames[0];
-    const sheet = wb.Sheets[sName];
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-    pagamentos = rows.map(row => {
-        const o = {}; for (const [k, v] of Object.entries(row)) o[normalizeCol(k)] = v;
-        let d = o.DATA instanceof Date ? o.DATA : (o.INICIO instanceof Date ? o.INICIO : (o.DATA_PAGAMENTO instanceof Date ? o.DATA_PAGAMENTO : null));
-        return {
-            matricula: String(o.MATRICULA || '').trim().replace(/^0+/, '').split('.')[0].toUpperCase(),
-            mes: d ? d.getMonth() + 1 : 0, ano: d ? d.getFullYear() : 0,
-            valor: parseBRL(o.VALOR_REEMBOLSO || o.VALOR || o.VALOR_PAGO)
-        };
-    }).filter(p => p.matricula && p.mes > 0);
+    let allPgs = [];
+
+    wb.SheetNames.forEach(sName => {
+        const sheet = wb.Sheets[sName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        const sheetPgs = rows.map(row => {
+            const o = {}; for (const [k, v] of Object.entries(row)) o[normalizeCol(k)] = v;
+            // Improved date detection: checks multiple possible columns
+            let d = o.DATA instanceof Date ? o.DATA :
+                (o.DATA_PAGAMENTO instanceof Date ? o.DATA_PAGAMENTO :
+                    (o.INICIO instanceof Date ? o.INICIO :
+                        (o.DATA_VALOR instanceof Date ? o.DATA_VALOR : null)));
+
+            return {
+                matricula: String(o.MATRICULA || '').trim().replace(/^0+/, '').split('.')[0].toUpperCase(),
+                mes: d ? d.getMonth() + 1 : 0,
+                ano: d ? d.getFullYear() : 0,
+                valor: parseBRL(o.VALOR_REEMBOLSO || o.VALOR || o.VALOR_PAGO || o.VALOR_P)
+            };
+        }).filter(p => p.matricula && p.mes > 0);
+        allPgs = allPgs.concat(sheetPgs);
+    });
+
+    pagamentos = allPgs;
     saveToStorage();
 }
 
@@ -538,7 +556,23 @@ function isBolsistaInSafra(b, s) {
 }
 
 function formatBRL(v) { return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
-function parseBRL(v) { if (!v) return 0; if (typeof v === 'number') return v; return parseFloat(String(v).replace('R$', '').replace(/\./g, '').replace(',', '.')) || 0; }
+function parseBRL(v) {
+    if (v === null || v === undefined) return 0;
+    if (typeof v === 'number') return v;
+    let s = String(v).replace('R$', '').trim();
+    if (!s) return 0;
+    // Check if it's BR format (comma for decimal) or US format (dot for decimal but might have commas for thousands)
+    if (s.includes(',') && s.includes('.')) {
+        if (s.indexOf('.') < s.indexOf(',')) { // BR format 1.234,56
+            s = s.replace(/\./g, '').replace(',', '.');
+        } else { // US format 1,234.56
+            s = s.replace(/,/g, '');
+        }
+    } else if (s.includes(',')) { // Only comma, assume BR decimal
+        s = s.replace(',', '.');
+    }
+    return parseFloat(s) || 0;
+}
 
 function saveToStorage() {
     localStorage.setItem('cocal_bolsistas', JSON.stringify(bolsistas)); localStorage.setItem('cocal_pagamentos', JSON.stringify(pagamentos)); localStorage.setItem('cocal_headcount', JSON.stringify(headcountRawData));
@@ -567,8 +601,8 @@ function filterTableByCategory(category) {
     if (category === 'ativos') {
         filtered = filtered.filter(b => norm(b.situacao) === 'ATIVO');
     } else if (category === 'pendentes') {
-        // Match KPI 2: Ativo + Regular
-        filtered = filtered.filter(b => norm(b.situacao) === 'ATIVO' && norm(b.checagem) === 'REGULAR');
+        // Match KPI 2: Ativo + Diferente de Regular
+        filtered = filtered.filter(b => norm(b.situacao) === 'ATIVO' && norm(b.checagem) !== 'REGULAR');
     }
 
     // Update search UI
@@ -580,6 +614,37 @@ function filterTableByCategory(category) {
     }
 
     // Sync table directory filter to match dashboard
+    const tableDirFilter = document.getElementById('filtro-tabela-diretoria');
+    if (tableDirFilter) tableDirFilter.value = dirSelection;
+
+    renderTable(filtered);
+}
+
+function filterTableBySituation(situation) {
+    const safra = document.getElementById('filtro-safra')?.value || 'todas';
+    const dirSelection = document.getElementById('filtro-diretoria')?.value || 'todas';
+    const norm = (s) => String(s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+
+    navigateTo('tabela');
+
+    let base = bolsistas;
+    if (dirSelection !== 'todas') {
+        base = base.filter(b => norm(b.diretoria) === norm(dirSelection));
+    }
+
+    let filtered = base.filter(b => isBolsistaInSafra(b, safra));
+
+    filtered = filtered.filter(b => {
+        const s = (b.checagem || b.situacao || 'OUTROS').toUpperCase();
+        return norm(s) === norm(situation);
+    });
+
+    const searchInput = document.getElementById('searchTerm');
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.placeholder = `LISTA: ${situation.toUpperCase()}`;
+    }
+
     const tableDirFilter = document.getElementById('filtro-tabela-diretoria');
     if (tableDirFilter) tableDirFilter.value = dirSelection;
 
@@ -830,8 +895,8 @@ function renderSituacaoTable(list, safra) {
         });
 
         html += `
-            <tr class="hover:bg-slate-50 border-b border-slate-50 transition-colors">
-                <td class="py-1 px-3 font-black text-slate-700 text-[10px] uppercase sticky left-0 bg-white z-10 shadow-[2px_0_5px_rgba(0,0,0,0.02)]">${sit}</td>
+            <tr onclick="filterTableBySituation('${sit}')" class="hover:bg-slate-50 border-b border-slate-50 transition-colors cursor-pointer group">
+                <td class="py-1 px-3 font-black text-slate-700 text-[10px] uppercase sticky left-0 bg-white z-10 shadow-[2px_0_5px_rgba(0,0,0,0.02)] group-hover:text-[#76B82A] transition-colors">${sit}</td>
                 ${colunasHtml}
                 <td class="py-1 px-3 text-right font-black text-slate-900 bg-slate-50/30">${totalLinha}</td>
             </tr>
