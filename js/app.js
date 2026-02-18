@@ -1,6 +1,6 @@
 ﻿/* ============================================================
-   COCAL � Gest�o de Bolsas de Estudos 
-   Application Logic � JAVASCRIPT (Vers�o Final Fiel ao Print)
+   COCAL – Gestão de Bolsas de Estudos 
+   Application Logic – JAVASCRIPT FIXED
    ============================================================ */
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -21,16 +21,16 @@ const MESES_SAFRA = [
 ];
 
 const COLUMN_MAP = {
-    'MATRICULA': ['MATRICULA', 'MATR�CULA', 'MATRIUCLA', 'MAT', 'COD', 'CODIGO', 'ID', 'MATRICULA_COLABORADOR'],
+    'MATRICULA': ['MATRICULA', 'MATRÍCULA', 'MATRIUCLA', 'MAT', 'COD', 'CODIGO', 'ID', 'MATRICULA_COLABORADOR'],
     'NOME': ['NOME', 'NOMES', 'COLABORADOR', 'FUNCIONARIO', 'NOME_COMPLETO', 'NM_FUNCIONARIO', 'NOME_FUNCIONARIO'],
     'DIRETORIA': ['DIRETORIA', 'DIRET', 'DIR', 'UNIDADE_DIRETORIA', 'DESC_DIRETORIA', 'DS_DIRETORIA', 'NOME_DIRETORIA', 'DESCRICAO_DIRETORIA', 'NM_DIRETORIA', 'DS_UNIDADE', 'DIRETORIA_UNIDADE', 'NOME_DA_DIRETORIA'],
     'CURSO': ['CURSO', 'PROGRAMA', 'NOME_CURSO', 'CURSO_FORMACAO', 'DESC_CURSO'],
-    'INSTITUICAO': ['INSTITUICAO', 'INSTITUI��O', 'IES', 'FACULDADE', 'UNIVERSIDADE', 'NOME_INSTITUICAO', 'NM_INSTITUICAO', 'INSTITUIO'],
-    'NIVEL': ['NIVEL', 'N�VEL', 'GRAU', 'MODALIDADE', 'NIVEL_ENSINO', 'TIPO', 'DESC_NIVEL'],
+    'INSTITUICAO': ['INSTITUICAO', 'INSTITUIÇÃO', 'IES', 'FACULDADE', 'UNIVERSIDADE', 'NOME_INSTITUICAO', 'NM_INSTITUICAO', 'INSTITUIO'],
+    'NIVEL': ['NIVEL', 'NÍVEL', 'GRAU', 'MODALIDADE', 'NIVEL_ENSINO', 'TIPO', 'DESC_NIVEL'],
     'VALOR_REEMBOLSO': ['VALOR_REEMBOLSO', 'VLR_REEMBOLSO', 'REEMBOLSO', 'VALOR', 'VALOR TOTAL', 'VALOR_PAGO', 'VLR_PAGO', 'VALOR_PAGO_R$', 'REEMBOLSO_VALOR', 'VALOR_P'],
-    'INICIO': ['INICIO', 'IN�CIO', 'DATA_INICIO', 'DT_INICIO', 'INGRESSO', 'DATA_ADMISSAO', 'DATA_CADASTRO', 'INICIO_CURSO'],
+    'INICIO': ['INICIO', 'INÍCIO', 'DATA_INICIO', 'DT_INICIO', 'INGRESSO', 'DATA_ADMISSAO', 'DATA_CADASTRO', 'INICIO_CURSO'],
     'FIM': ['FIM', 'DATA_FIM', 'DT_FIM', 'PREVISAO_TERMINO', 'TERMINO', 'FIM_CURSO'],
-    'SITUACAO': ['SITUACAO', 'SITUA��O', 'STATUS', 'SIT', 'STATUS_BOLSA', 'SITUACAO_ATUAL'],
+    'SITUACAO': ['SITUACAO', 'SITUAÇÃO', 'STATUS', 'SIT', 'STATUS_BOLSA', 'SITUACAO_ATUAL'],
     'COD_LOCAL': ['COD_LOCAL', 'CODIGO_LOCAL', 'COD LOCAL', 'CENTRO_CUSTO', 'COD_CC', 'CC', 'ESTRUTURA', 'COD._LOCAL']
 };
 
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sessionStorage.getItem('logged') === 'true') showApp();
 });
 
-// --------------- NOTIFICA��ES ---------------
+// --------------- NOTIFICAÇÕES ---------------
 function showToast(msg, type = 'success') {
     const toast = document.createElement('div');
     toast.className = `fixed bottom-10 right-10 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl z-[3000] animate-in ${type === 'success' ? 'bg-[#76B82A] text-white' : 'bg-red-500 text-white'}`;
@@ -59,7 +59,7 @@ function showToast(msg, type = 'success') {
 }
 
 function limparCache() {
-    if (confirm('Deseja realmente limpar todos os dados salvos localmente? O sistema ser� reiniciado.')) {
+    if (confirm('Deseja realmente limpar todos os dados salvos localmente? O sistema será reiniciado.')) {
         localStorage.clear(); sessionStorage.clear(); location.reload();
     }
 }
@@ -107,13 +107,19 @@ function refreshDashboard() {
     const dirSelection = document.getElementById('filtro-diretoria')?.value || 'todas';
     const norm = (s) => String(s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
 
-    const listByDir = (dirSelection === 'todas') ? bolsistas : bolsistas.filter(b => norm(b.diretoria) === norm(dirSelection));
+    // Filter only those who are active (ATIVO or REGULAR statuses)
+    const normalizedAtivos = bolsistas.filter(b => ['ATIVO', 'REGULAR'].includes(norm(b.situacao)));
+
+    // Fallback: if no ATIVO/REGULAR found, don't filter everything out (might be a mapping issue)
+    const baseList = (normalizedAtivos.length > 0) ? normalizedAtivos : bolsistas;
+
+    const listByDir = (dirSelection === 'todas') ? baseList : baseList.filter(b => norm(b.diretoria) === norm(dirSelection));
     const listFiltrada = listByDir.filter(b => isBolsistaInSafra(b, safra));
-    // FILTER: Strict 'ATIVO' check for KPI
-    const ativos = listByDir.filter(b => norm(b.situacao) === 'ATIVO');
 
+    // KPI should show count of active individuals under the current filters
+    const ativos = listByDir;
 
-    if (document.getElementById('kpi-ativos')) document.getElementById('kpi-ativos').textContent = listFiltrada.length || ativos.length;
+    if (document.getElementById('kpi-ativos')) document.getElementById('kpi-ativos').textContent = listFiltrada.length;
 
     let pgsList = [...pagamentos];
     if (dirSelection !== 'todas') {
@@ -143,6 +149,7 @@ function refreshDashboard() {
         dadosPorMes[key].valor += p.valor;
     });
 
+    // Expose data globally for external scripts (like toggle_evolucao.js)
     window.dadosEvolucaoMensal = {
         dadosPorMes,
         safraAtual: safra,
@@ -176,6 +183,9 @@ function renderCharts(baseList, safra) {
             dadosMes[key].q++;
         });
 
+
+
+
         const keys = Object.keys(dadosMes).sort();
         charts.chartValorVsQtd = new Chart(canvasEv, {
             type: 'bar',
@@ -183,59 +193,119 @@ function renderCharts(baseList, safra) {
                 labels: keys.map(k => `${MESES_ABR[parseInt(k.split('-')[1]) - 1]}/${k.split('-')[0].substring(2)}`),
                 datasets: [
                     {
-                        label: 'Valor de Reembolso',
-                        data: keys.map(k => dadosMes[k].v),
-                        backgroundColor: '#76B82A',
-                        borderRadius: 5,
-                        barPercentage: 0.7,
-                        datalabels: {
-                            anchor: 'end', align: 'top', offset: 12,
-                            formatter: (v) => v > 0 ? v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
-                            font: { size: 10, weight: '800' }, color: '#1e293b'
-                        }
-                    },
-                    {
                         label: 'Quantidade de Reembolso',
                         type: 'line',
                         data: keys.map(k => dadosMes[k].q),
                         borderColor: '#1e293b',
-                        borderWidth: 2.5,
-                        pointBackgroundColor: '#1e293b', // Solid points like the image
-                        pointBorderColor: '#1e293b',
-                        pointBorderWidth: 1,
-                        pointRadius: 5,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#1e293b',
+                        pointBorderColor: '#ffffff', // White border for contrast
+                        pointBorderWidth: 2,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
                         fill: false,
+                        tension: 0.1, // Slight curve for modern look
+                        order: 1,
+                        yAxisID: 'y1',
                         datalabels: {
-                            anchor: 'center', align: 'top', offset: 15,
+                            align: 'top',
+                            anchor: 'center',
+                            offset: 6,
                             formatter: (v) => v > 0 ? v : '',
-                            font: { size: 11, weight: '800' }, color: '#1e293b'
+                            font: { size: 12, weight: '900' },
+                            color: '#1e293b'
+                        }
+                    },
+                    {
+                        label: 'Valor de Reembolso',
+                        type: 'bar',
+                        data: keys.map(k => dadosMes[k].v),
+                        backgroundColor: '#76B82A',
+                        borderRadius: 6,
+                        barPercentage: 0.9,
+                        categoryPercentage: 0.8,
+                        order: 2,
+                        yAxisID: 'y',
+                        datalabels: {
+                            align: 'end',
+                            anchor: 'end',
+                            offset: 0,
+                            formatter: (v) => v > 0 ? 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
+                            font: { size: 10, weight: '900' },
+                            color: '#1e293b'
                         }
                     }
                 ]
             },
             options: {
-                responsive: true, maintainAspectRatio: false,
-                layout: { padding: { top: 60, bottom: 20 } },
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { top: 40, left: 10, right: 10, bottom: 0 } },
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
                 plugins: {
                     legend: {
                         position: 'top',
+                        align: 'center',
                         labels: {
-                            boxWidth: 15, // Square icons as requested
-                            font: { size: 11, weight: '700' },
-                            padding: 30,
-                            usePointStyle: false
+                            usePointStyle: true,
+                            pointStyle: 'rectRounded',
+                            boxWidth: 16,
+                            padding: 10,
+                            font: {
+                                size: 12,
+                                weight: '700',
+                                family: "'Inter', sans-serif"
+                            },
+                            color: '#64748b'
                         }
                     },
-                    datalabels: { display: true }
+                    datalabels: {
+                        display: true
+                    },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: '#1e293b',
+                        titleFont: { size: 13, weight: '700' },
+                        bodyFont: { size: 12 },
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        boxPadding: 4
+                    }
                 },
                 scales: {
-                    x: { grid: { display: false }, ticks: { font: { size: 10, weight: '600' }, padding: 15 } },
+                    x: {
+                        grid: { display: false, drawBorder: false },
+                        ticks: {
+                            font: { size: 11, weight: '600' },
+                            color: '#64748b',
+                            padding: 10
+                        },
+                        border: { display: false }
+                    },
                     y: {
+                        type: 'linear',
                         display: false,
+                        position: 'left',
                         beginAtZero: true,
+                        grid: { display: false },
                         suggestedMax: (context) => {
-                            const vals = context.chart.data.datasets[0].data;
-                            return Math.max(...vals) * 1.35; // Centering the line point in the bar
+                            const max = Math.max(...context.chart.data.datasets[1].data);
+                            return max * 1.25; // Space for labels
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: false,
+                        position: 'right',
+                        beginAtZero: true,
+                        grid: { display: false },
+                        suggestedMax: (context) => {
+                            const max = Math.max(...context.chart.data.datasets[0].data);
+                            return max * 1.5; // Positions the line well above overlapping labels
                         }
                     }
                 }
@@ -259,13 +329,29 @@ function renderCharts(baseList, safra) {
                 datasets: [{
                     data: labels.map(l => counts[l]),
                     backgroundColor: labels.map(l => (['REGULAR', 'ATIVO'].includes(l)) ? '#76B82A' : '#f59e0b'),
-                    borderRadius: 5, barThickness: 25
+                    borderRadius: 5, barThickness: 18
                 }]
             },
             options: {
                 indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'end', formatter: (v) => `${v}`, font: { size: 11, weight: '900' }, color: '#1e293b' } },
-                scales: { x: { display: false, beginAtZero: true }, y: { grid: { display: false }, ticks: { font: { size: 9, weight: '800' }, color: '#64748b' } } }
+                layout: { padding: { right: 80 } }, // Give space for the "X BOLSISTAS" label
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'end',
+                        formatter: (v) => `${v} BOLSISTAS`,
+                        font: { size: 10, weight: '900' },
+                        color: '#1e293b'
+                    }
+                },
+                scales: {
+                    x: { display: false, beginAtZero: true },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { size: 9, weight: '800' }, color: '#64748b' }
+                    }
+                }
             }
         });
     }
@@ -303,7 +389,7 @@ function updateDirStats(baseList, pgs, safra) {
 
 // --------------- DATA FETCH ---------------
 async function autoConnect() {
-    showToast('? Atualizando bases de dados...');
+    showToast('↻ Atualizando bases de dados...');
     try {
         const fetchFile = async (p) => {
             const r = await fetch(p + '?v=' + Date.now());
@@ -319,8 +405,8 @@ async function autoConnect() {
         if (d3) processOrganogramaBase(d3);
         if (d4) processHeadcountBase(d4);
 
-        if (d1 || d2 || d3 || d4) { joinBasesData(); refreshDashboard(); showToast('? Dados sincronizados!'); }
-    } catch (e) { console.error(e); showToast('? Erro de conex�o.', 'error'); }
+        if (d1 || d2 || d3 || d4) { joinBasesData(); refreshDashboard(); showToast('✔ Dados sincronizados!'); }
+    } catch (e) { console.error(e); showToast('❌ Erro de conexão.', 'error'); }
 }
 
 function processHeadcountBase(data) {
@@ -365,13 +451,14 @@ function processBolsasBase(data) {
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
     bolsistas = rows.map(row => {
         const o = {}; for (const [k, v] of Object.entries(row)) o[normalizeCol(k)] = v;
-        const mat = String(o.MATRICULA || '').trim().replace(/^0+/, '').split('.')[0];
+        const mat = String(o.MATRICULA || '').trim().replace(/^0+/, '').split('.')[0].toUpperCase();
         return {
             matricula: mat, nome: String(o.NOME || '').trim(), diretoria: String(o.DIRETORIA || 'SEM DIRETORIA').toUpperCase().trim(),
             situacao: String(o.SITUACAO || 'REGULAR').toUpperCase().trim(), valor_reembolso: parseBRL(o.VALOR_REEMBOLSO),
             cod_local: String(o.COD_LOCAL || '').trim(), checagem: String(o.CHECAGEM || '').trim(),
             inicio: o.INICIO instanceof Date ? o.INICIO : null, fim: o.FIM instanceof Date ? o.FIM : null,
-            curso: String(o.CURSO || '').trim(), nivel: String(o.NIVEL || '').trim()
+            curso: String(o.CURSO || '').trim(), nivel: String(o.NIVEL || '').trim(),
+            ies: String(o.INSTITUICAO || o.IES || '').trim()
         };
     }).filter(b => b.matricula);
     saveToStorage();
@@ -384,9 +471,9 @@ function processPagamentosBase(data) {
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
     pagamentos = rows.map(row => {
         const o = {}; for (const [k, v] of Object.entries(row)) o[normalizeCol(k)] = v;
-        let d = o.DATA instanceof Date ? o.DATA : (o.INICIO instanceof Date ? o.INICIO : null);
+        let d = o.DATA instanceof Date ? o.DATA : (o.INICIO instanceof Date ? o.INICIO : (o.DATA_PAGAMENTO instanceof Date ? o.DATA_PAGAMENTO : null));
         return {
-            matricula: String(o.MATRICULA || '').trim().replace(/^0+/, '').split('.')[0],
+            matricula: String(o.MATRICULA || '').trim().replace(/^0+/, '').split('.')[0].toUpperCase(),
             mes: d ? d.getMonth() + 1 : 0, ano: d ? d.getFullYear() : 0,
             valor: parseBRL(o.VALOR_REEMBOLSO || o.VALOR || o.VALOR_PAGO)
         };
@@ -400,38 +487,52 @@ function processOrganogramaBase(data) {
     saveToStorage();
 }
 
+
 function joinBasesData() {
-    if (bolsistas.length === 0 || organograma.length === 0) return;
-    const orgMap = {};
-    organograma.forEach(i => {
-        const r = {}; for (const [k, v] of Object.entries(i)) r[normalizeCol(k)] = v;
-        if (r.COD_LOCAL) {
-            let dir = String(r.DIRETORIA || '').trim().toUpperCase();
-            if (dir) orgMap[String(r.COD_LOCAL).trim()] = dir;
-        }
-    });
-
-    bolsistas = bolsistas.map(b => {
-        const code = String(b.cod_local || '').trim();
-        let foundDir = '';
-        if (orgMap[code]) foundDir = orgMap[code];
-        else {
-            let p = code.split('.');
-            while (p.length > 0 && !foundDir) {
-                if (orgMap[p.join('.')]) foundDir = orgMap[p.join('.')];
-                p.pop();
+    // 1. Tenta enriquecer dados usando o Organograma (se disponível)
+    if (bolsistas.length > 0 && organograma.length > 0) {
+        const orgMap = {};
+        organograma.forEach(i => {
+            const r = {}; for (const [k, v] of Object.entries(i)) r[normalizeCol(k)] = v;
+            const mat = String(r.MATRICULA || '').trim().replace(/^0+/, '').split('.')[0].toUpperCase();
+            if (mat) orgMap[mat] = String(r.DIRETORIA || '').trim().toUpperCase();
+            if (r.COD_LOCAL) {
+                let dir = String(r.DIRETORIA || '').trim().toUpperCase();
+                if (dir) orgMap[String(r.COD_LOCAL).trim()] = dir;
             }
-        }
-        b.diretoria = foundDir || b.diretoria || 'SEM DIRETORIA';
-        return b;
-    });
+        });
 
-    const dirs = [...new Set(bolsistas.map(b => b.diretoria))].filter(d => d).sort();
-    const el = document.getElementById('filtro-diretoria');
-    if (el) {
-        const cur = el.value;
-        el.innerHTML = '<option value="todas">Todas Diretorias</option>' + dirs.map(d => `<option value="${d}">${d}</option>`).join('');
-        el.value = (dirs.includes(cur) ? cur : 'todas');
+        bolsistas = bolsistas.map(b => {
+            // First try matching by Matricula directly in Organograma
+            if (orgMap[b.matricula]) foundDir = orgMap[b.matricula];
+            else if (orgMap[code]) foundDir = orgMap[code];
+            else {
+                let p = code.split('.');
+                while (p.length > 0 && !foundDir) {
+                    if (orgMap[p.join('.')]) foundDir = orgMap[p.join('.')];
+                    p.pop();
+                }
+            }
+            // Prioriza a Diretoria que vem na BASE (excel principal), conforme pedido pelo usuário
+            // O Organograma serve como fallback caso a base esteja vazia
+            b.diretoria = (b.diretoria && b.diretoria !== 'SEM DIRETORIA') ? b.diretoria : (foundDir || 'SEM DIRETORIA');
+            return b;
+        });
+    }
+
+    // 2. Popula os filtros de Diretorias (Dashboard, Tabela e Histórico)
+    if (bolsistas.length > 0) {
+        const dirs = [...new Set(bolsistas.map(b => b.diretoria))].filter(d => d && d !== 'SEM DIRETORIA').sort();
+        const filters = ['filtro-diretoria', 'filtro-tabela-diretoria', 'filterHistoryDir'];
+
+        filters.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                const cur = el.value;
+                el.innerHTML = '<option value="todas">Todas as Diretorias</option>' + dirs.map(d => `<option value="${d}">${d}</option>`).join('');
+                el.value = (dirs.concat('todas').includes(cur) ? cur : 'todas');
+            }
+        });
     }
 }
 
@@ -454,86 +555,54 @@ function loadFromStorage() {
     try { bolsistas = JSON.parse(localStorage.getItem('cocal_bolsistas') || '[]'); pagamentos = JSON.parse(localStorage.getItem('cocal_pagamentos') || '[]'); headcountRawData = JSON.parse(localStorage.getItem('cocal_headcount') || '[]'); } catch { bolsistas = []; }
 }
 
-function renderCharts(safra, bolsistas, pagamentos) {
-    if (!document.getElementById('chart-evolucao')) return;
 
+function filterTableByCategory(category) {
+    navigateTo('tabela');
     const norm = (s) => String(s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
-    // FILTER: Evolution chart uses ONLY active students as requested
-    const listEvolucao = bolsistas.filter(b => norm(b.situacao) === 'ATIVO');
 
-    // Chart 1: Evolu��o
-    const dataValor = [], dataQtd = [];
-    MESES_SAFRA.forEach(mes => {
-        const pgsMes = pagamentos.filter(p => p.mes === mes.mes && p.ano === mes.ano);
-        const bolsistasMes = listEvolucao.filter(b => {
-            const bIni = b.inicio ? new Date(b.inicio) : null;
-            const bFim = b.fim ? new Date(b.fim) : null;
-            const mesDate = new Date(mes.ano, mes.mes - 1, 1);
-            return bIni && bIni <= mesDate && (!bFim || bFim >= mesDate);
-        });
-        dataValor.push(pgsMes.reduce((acc, p) => acc + p.valor, 0));
-        dataQtd.push(bolsistasMes.length);
-    });
+    let filtered = bolsistas;
+    if (category === 'ativos') {
+        filtered = bolsistas.filter(b => norm(b.situacao) === 'ATIVO');
+    } else if (category === 'pendentes') {
+        const m = new Date().getMonth() + 1, a = new Date().getFullYear();
+        const matsPagas = new Set(pagamentos.filter(p => p.mes === m && p.ano === a).map(p => p.matricula));
+        filtered = bolsistas.filter(b => norm(b.situacao) === 'ATIVO' && !matsPagas.has(b.matricula));
+    }
 
-    destroyChart('chart-evolucao');
-    charts['chart-evolucao'] = new Chart(document.getElementById('chart-evolucao').getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: MESES_SAFRA.map(m => m.label),
-            datasets: [
-                { label: 'Valor Reembolsado', data: dataValor, borderColor: '#76B82A', backgroundColor: 'rgba(118, 184, 42, 0.2)', fill: true, tension: 0.3, yAxisID: 'y' },
-                { label: 'Bolsistas Ativos', data: dataQtd, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.2)', fill: true, tension: 0.3, yAxisID: 'y1' }
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: { legend: { display: true, position: 'top' } },
-            scales: {
-                x: { display: true, title: { display: true, text: 'M�s/Ano' } },
-                y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Valor Reembolsado' }, ticks: { callback: function (value) { return formatBRL(value); } } },
-                y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: 'Bolsistas Ativos' }, grid: { drawOnChartArea: false } }
-            }
-        }
-    });
+    // Update search placeholder to reflect filter
+    const searchInput = document.getElementById('searchTerm');
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.placeholder = category === 'todos' ? 'Pesquisar por nome, matrícula ou diretoria...' :
+            (category === 'ativos' ? 'Filtrando apenas ATIVOS...' : 'Filtrando PENDÊNCIAS de pagamento...');
+    }
 
-    // Chart 2: Situa��o
-    const counts = {};
-    bolsistas.forEach(b => { const s = (b.checagem || b.situacao || 'OUTROS').toUpperCase(); counts[s] = (counts[s] || 0) + 1; });
-    const labels = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-
-    destroyChart('chart-situacao');
-    charts['chart-situacao'] = new Chart(document.getElementById('chart-situacao').getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: labels.map(l => counts[l]),
-                backgroundColor: labels.map(l => (['REGULAR', 'ATIVO'].includes(l)) ? '#76B82A' : '#f59e0b'),
-                borderRadius: 5, barThickness: 25
-            }]
-        },
-        options: {
-            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'end', formatter: (v) => `${v}`, font: { size: 11, weight: '900' }, color: '#1e293b' } },
-            scales: { x: { display: false, beginAtZero: true }, y: { grid: { display: false }, ticks: { font: { size: 9, weight: '800' }, color: '#64748b' } } }
-        }
-    });
-}
-
-function verAtivos() {
-    const norm = (s) => String(s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
-    const ativos = bolsistas.filter(b => norm(b.situacao) === 'ATIVO');
-    renderTable(ativos);
+    renderTable(filtered);
 }
 
 function renderTable(listParam) {
     const tbody = document.getElementById('tableBody');
     if (!tbody) return;
+
     const term = (document.getElementById('searchTerm')?.value || '').toLowerCase();
-    const list = (listParam || bolsistas).filter(b => (b.nome + b.matricula + b.diretoria + b.situacao).toLowerCase().includes(term));
-    tbody.innerHTML = list.length === 0 ? '<tr><td colspan="6" class="p-10 text-center text-slate-400 font-bold">Nenhum dado...</td></tr>' :
+    const dirFilter = document.getElementById('filtro-tabela-diretoria')?.value || 'todas';
+    const norm = (s) => String(s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+
+    let list = listParam || bolsistas;
+
+    // Filter by Directory
+    if (dirFilter !== 'todas') {
+        list = list.filter(b => norm(b.diretoria) === norm(dirFilter));
+    }
+
+    // Filter by Search Term
+    if (term) {
+        list = list.filter(b => (b.nome + b.matricula).toLowerCase().includes(term));
+    }
+
+    tbody.innerHTML = list.length === 0 ? '<tr><td colspan="6" class="p-10 text-center text-slate-400 font-bold">Nenhum dado encontrado para os filtros aplicados...</td></tr>' :
         list.map(b => `<tr class="hover:bg-slate-50 cursor-pointer border-b border-slate-50" onclick="openProfile('${b.matricula}')"><td class="px-6 py-4"><div class="font-black text-slate-800 text-sm uppercase">${b.nome}</div><div class="text-[10px] text-slate-400 font-bold">${b.matricula}</div></td><td class="px-6 py-4 uppercase text-[10px] font-bold text-slate-500">${b.diretoria}</td><td class="px-6 py-4"><div class="text-[10px] font-black text-slate-700 uppercase">${b.nivel || '---'}</div><div class="text-[9px] text-slate-400 font-medium truncate max-w-[150px]">${b.curso || '---'}</div></td><td class="px-6 py-4 text-[10px] font-bold text-slate-500 text-center">-</td><td class="px-6 py-4 text-sm font-black text-slate-800">${formatBRL(b.valor_reembolso)}</td><td class="px-6 py-4"><span class="badge ${['ATIVO', 'REGULAR'].includes(String(b.situacao).toUpperCase()) ? 'badge-active' : 'badge-inactive'}">${b.situacao}</span></td></tr>`).join('');
+
     if (document.getElementById('tableCountBadge')) document.getElementById('tableCountBadge').textContent = list.length;
 }
 
@@ -541,16 +610,114 @@ function openProfile(mat) {
     const b = bolsistas.find(x => x.matricula === mat);
     if (!b) return;
     navigateTo('perfil');
+
+    // Basic Info
     document.getElementById('profile-name').textContent = b.nome;
     document.getElementById('profile-matricula').textContent = b.matricula;
     document.getElementById('profile-diretoria').textContent = b.diretoria;
-    const pgs = pagamentos.filter(p => p.matricula === mat);
-    document.getElementById('profile-total-reembolsado').textContent = formatBRL(pgs.reduce((a, p) => a + p.valor, 0));
+    document.getElementById('profile-pfp').textContent = b.nome.charAt(0);
+
+    const statusBadge = document.getElementById('profile-status-badge');
+    if (statusBadge) {
+        statusBadge.textContent = b.situacao;
+        statusBadge.className = `badge ${['ATIVO', 'REGULAR'].includes(String(b.situacao).toUpperCase()) ? 'badge-active' : 'badge-inactive'}`;
+    }
+
+    // Academic Data
+    const acadContainer = document.getElementById('profile-curso-info');
+    if (acadContainer) {
+        acadContainer.innerHTML = `
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Instituição</p>
+                    <p class="text-xs font-bold text-slate-700 uppercase">${b.instituicao || '---'}</p>
+                </div>
+                <div>
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Nível</p>
+                    <p class="text-xs font-bold text-slate-700 uppercase">${b.nivel || '---'}</p>
+                </div>
+                <div class="col-span-2">
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Curso</p>
+                    <p class="text-xs font-bold text-slate-700 uppercase">${b.curso || '---'}</p>
+                </div>
+                <div>
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Início</p>
+                    <p class="text-xs font-bold text-slate-700 uppercase">${b.inicio ? b.inicio.toLocaleDateString('pt-BR') : '---'}</p>
+                </div>
+                <div>
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Término</p>
+                    <p class="text-xs font-bold text-slate-700 uppercase">${b.fim ? b.fim.toLocaleDateString('pt-BR') : '---'}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    // Payments Logic
+    const pgs = pagamentos.filter(p => p.matricula === mat).sort((a, b) => (b.ano * 100 + b.mes) - (a.ano * 100 + a.mes));
+    const total = pgs.reduce((acc, p) => acc + p.valor, 0);
+    document.getElementById('profile-total-reembolsado').textContent = formatBRL(total);
+
+    // Payment History Table
+    const histTable = document.getElementById('profile-history-table');
+    if (histTable) {
+        histTable.innerHTML = pgs.length === 0 ? '<tr><td colspan="4" class="p-8 text-center text-slate-400 italic">Nenhum pagamento registrado</td></tr>' :
+            pgs.map(p => `
+                <tr class="border-b border-slate-50 hover:bg-slate-50">
+                    <td class="py-4 px-6 text-[11px] font-bold text-slate-600 uppercase">${MESES_ABR[p.mes - 1]}/${String(p.ano).substring(2)}</td>
+                    <td class="py-4 px-6 text-[11px] font-black text-slate-800">${formatBRL(p.valor)}</td>
+                    <td class="py-4 px-6 text-[10px] font-medium text-slate-400">${p.mes}/${p.ano}</td>
+                    <td class="py-4 px-6"><span class="badge badge-active !text-[9px]">PAGO</span></td>
+                </tr>
+            `).join('');
+    }
+
+    // Evolution Chart (Profile)
+    const canvas = destroyChart('chartProfileEvolution');
+    if (canvas) {
+        // Group by month for the last 12 months or all payments
+        const last12 = [...pgs].reverse().slice(-12);
+        charts.chartProfileEvolution = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: last12.map(p => `${MESES_ABR[p.mes - 1]}/${String(p.ano).substring(2)}`),
+                datasets: [{
+                    label: 'Investimento Mensal',
+                    data: last12.map(p => p.valor),
+                    borderColor: '#76B82A',
+                    backgroundColor: 'rgba(118, 184, 42, 0.1)',
+                    borderWidth: 4,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#76B82A',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        align: 'top',
+                        formatter: (v) => formatBRL(v),
+                        font: { size: 9, weight: '900' },
+                        color: '#76B82A'
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 9, weight: '700' }, color: '#94a3b8' } },
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { display: false } }
+                }
+            }
+        });
+    }
 }
 
 function toggleSituacaoView() {
     const g = document.getElementById('container-grafico-sit'), t = document.getElementById('container-tabela-sit'), b = document.getElementById('btn-toggle-sit');
-    if (!g.classList.contains('hidden')) { g.classList.add('hidden'); t.classList.remove('hidden'); b.innerHTML = '<i class="fa-solid fa-chart-column"></i><span>Ver Gr�fico</span>'; renderSituacaoTable(); }
+    if (!g.classList.contains('hidden')) { g.classList.add('hidden'); t.classList.remove('hidden'); b.innerHTML = '<i class="fa-solid fa-chart-column"></i><span>Ver Gráfico</span>'; renderSituacaoTable(); }
     else { g.classList.remove('hidden'); t.classList.add('hidden'); b.innerHTML = '<i class="fa-solid fa-table"></i><span>Ver Tabela</span>'; }
 }
 
@@ -566,7 +733,7 @@ function renderSituacaoTable(list, safra) {
 function toggleEvolucaoView() {
     const g = document.getElementById('container-evolucao-grafico'), t = document.getElementById('container-evolucao-tabela'), b = document.getElementById('btn-toggle-evolucao');
     if (!g.classList.contains('hidden')) {
-        g.classList.add('hidden'); t.classList.remove('hidden'); b.innerHTML = '<i class="fa-solid fa-chart-column"></i><span>Ver Gr�fico</span>';
+        g.classList.add('hidden'); t.classList.remove('hidden'); b.innerHTML = '<i class="fa-solid fa-chart-column"></i><span>Ver Gráfico</span>';
         if (typeof renderTabelaEvolucao === 'function') renderTabelaEvolucao();
     } else {
         g.classList.remove('hidden'); t.classList.add('hidden'); b.innerHTML = '<i class="fa-solid fa-table"></i><span>Ver Tabela</span>';
@@ -575,6 +742,7 @@ function toggleEvolucaoView() {
 }
 
 function triggerImport(id) { document.getElementById(`input-${id === 'base' ? 'base-bolsas' : (id === 'sucessao' ? 'sucessao' : 'penalidades')}`).click(); }
+
 function handleFileImport(input, type) {
     if (!input.files[0]) return;
     const r = new FileReader(); r.onload = (e) => {
