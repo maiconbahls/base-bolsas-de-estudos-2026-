@@ -326,6 +326,18 @@ function renderCharts(baseList, safra) {
             options: {
                 indexAxis: 'y', responsive: true, maintainAspectRatio: false,
                 layout: { padding: { right: 80 } }, // Give space for the "X BOLSISTAS" label
+                onClick: (event, elements) => {
+                    if (elements && elements.length > 0) {
+                        const index = elements[0].index;
+                        const label = labels[index];
+                        if (typeof filterTableBySituation === 'function') {
+                            filterTableBySituation(label);
+                        }
+                    }
+                },
+                onHover: (event, elements) => {
+                    event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+                },
                 plugins: {
                     legend: { display: false },
                     datalabels: {
