@@ -1,0 +1,1465 @@
+àÈ<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cocal | GestÃ£o EstratÃ©gica de Bolsas</title>
+
+    <!-- Tailwind & CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://site-assets.fontawesome.com/releases/v6.5.1/css/all.css">
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Data Libs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+</head>
+
+<body>
+
+    <!-- â”€â”€â”€â”€â”€ LOGIN MODAL â”€â”€â”€â”€â”€ -->
+    <div id="login-modal"
+        class="fixed inset-0 z-[2500] bg-[#f4f7f9] flex items-center justify-center p-6 transition-all duration-700">
+        <div class="card-white w-full max-w-md text-center">
+            <div
+                class="w-20 h-20 rounded-2xl bg-[#76B82A] mx-auto mb-10 flex items-center justify-center shadow-2xl p-4">
+                <img src="img/logo.png" alt="Cocal" class="w-full h-full object-contain brightness-0 invert">
+            </div>
+            <h2 class="text-3xl font-black mb-1 font-outfit text-slate-800">Cocal Bolsas</h2>
+            <p class="text-slate-400 mb-10 text-sm font-bold uppercase tracking-widest">Painel de Controle Corporativo
+            </p>
+            <form id="loginForm" class="space-y-4 text-left">
+                <input type="text" id="username" placeholder="UsuÃ¡rio corporativo"
+                    class="w-full !p-4 !bg-slate-50 !border-none rounded-xl">
+                <input type="password" id="password" placeholder="Senha"
+                    class="w-full !p-4 !bg-slate-50 !border-none rounded-xl">
+                <p id="login-error" class="hidden text-red-500 text-[11px] font-bold mt-2">Credenciais invÃ¡lidas!</p>
+                <button type="submit"
+                    class="w-full py-5 bg-[#76B82A] text-white font-black rounded-xl shadow-xl shadow-[#76B82A]/20 hover:bg-[#5A9033] transition-all mt-6">ENTRAR
+                    NO SISTEMA</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- â”€â”€â”€â”€â”€ SIDEBAR NAVIGATION (REF IMAGE 4) â”€â”€â”€â”€â”€ -->
+    <header class="main-header hidden-section" id="app-header">
+        <div class="flex items-center gap-6">
+            <div class="header-logo-box">
+                <img src="img/logo.png" alt="Cocal" class="w-full h-full object-contain brightness-0 invert">
+            </div>
+            <div class="sidebar-brand-text">
+                <h1 class="font-outfit">COCAL</h1>
+                <p>GestÃ£o de Bolsas</p>
+            </div>
+        </div>
+
+        <nav class="nav-container">
+            <button onclick="navigateTo('dashboard')" id="nav-dashboard" class="nav-item active">
+                <i class="fas fa-grid-2"></i> Bolsas de Estudos
+            </button>
+            <button onclick="filterTableByCategory('todos')" id="nav-tabela" class="nav-item">
+                <i class="fas fa-users-line"></i> Colaboradores
+                <span class="ml-auto bg-slate-100 text-slate-500 text-[10px] px-2 py-0.5 rounded-full font-bold"
+                    id="tableCountBadge">0</span>
+            </button>
+            <button onclick="navigateTo('historico')" id="nav-historico" class="nav-item">
+                <i class="fas fa-chart-line-up"></i> AnÃ¡lise GrÃ¡fica
+            </button>
+            <button onclick="navigateTo('conferencia-pagamento')" id="nav-conferencia-pagamento" class="nav-item">
+                <i class="fas fa-money-check-dollar"></i> LanÃ§amentos
+            </button>
+            <button onclick="navigateTo('candidatos')" id="nav-candidatos" class="nav-item">
+                <i class="fas fa-user-plus"></i> Novo Registro
+            </button>
+            <button onclick="navigateTo('conferencia')" id="nav-conferencia" class="nav-item">
+                <i class="fas fa-gear"></i> ConfiguraÃ§Ãµes
+            </button>
+        </nav>
+
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3 pr-6 border-r border-slate-100">
+                <div
+                    class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs">
+                    A</div>
+                <div class="text-left leading-tight hidden xl:block">
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">GestÃ£o RH</p>
+                    <p class="text-[10px] font-black text-slate-700 uppercase">Administrador</p>
+                </div>
+            </div>
+            <button onclick="logout()"
+                class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all flex items-center justify-center"
+                title="Sair do Sistema">
+                <i class="fas fa-power-off text-sm"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- â”€â”€â”€â”€â”€ MAIN CONTENT â”€â”€â”€â”€â”€ -->
+    <main id="app-container" class="flex-1 overflow-y-auto hidden-section">
+        <div id="app-content" class="p-5 opacity-0 transition-all duration-700">
+
+            <!-- â•â•â•â•â•â•â• VIEW: DASHBOARD â•â•â•â•â•â•â• -->
+            <div id="view-dashboard" class="page-section animate-in">
+                <div class="w-full max-w-full">
+                    <!-- Dashboard Header: Unified & Cleaned -->
+                    <div class="flex items-center justify-between mb-4 pb-4 border-b border-slate-100/50">
+                        <div>
+                            <h2 class="text-3xl font-black font-outfit text-slate-800 tracking-tighter">Bolsas de
+                                Estudos</h2>
+                            <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">DASHBOARD
+                            </p>
+                        </div>
+
+                        <div class="flex items-center gap-4">
+                            <!-- Filter: Safra -->
+                            <div
+                                class="card-white !p-2 !px-4 flex items-center gap-3 border border-slate-100 shadow-sm">
+                                <i class="fa-solid fa-calendar text-[#76B82A]"></i>
+                                <select id="filtro-safra" onchange="refreshDashboard()"
+                                    class="bg-transparent text-[11px] font-black text-slate-600 outline-none uppercase cursor-pointer">
+                                    <option value="todas">Todas as Safras</option>
+                                    <option value="2025/2026">Safra 2025/2026</option>
+                                    <option value="2024/2025">Safra 2024/2025</option>
+                                    <option value="2023/2024">Safra 2023/2024</option>
+                                    <option value="2022/2023">Safra 2022/2023</option>
+                                    <option value="2021/2022">Safra 2021/2022</option>
+                                    <option value="2020/2021">Safra 2020/2021</option>
+                                    <option value="2019/2020">Safra 2019/2020</option>
+                                </select>
+                            </div>
+                            <!-- Filter: Diretoria -->
+                            <div
+                                class="card-white !p-2 !px-4 flex items-center gap-3 border border-slate-100 shadow-sm">
+                                <i class="fa-solid fa-building text-[#76B82A]"></i>
+                                <select id="filtro-diretoria" onchange="refreshDashboard()"
+                                    class="bg-transparent text-[11px] font-black text-slate-600 outline-none uppercase cursor-pointer min-w-[180px]">
+                                    <option value="todas">Todas Diretorias</option>
+                                </select>
+                            </div>
+
+
+
+                        </div>
+                    </div>
+
+
+                    <div class="grid grid-cols-12 gap-4">
+
+                        <!-- Left Column: Charts (9 cols) -->
+                        <div class="col-span-9 space-y-4">
+
+                            <!-- Evolution Chart Card -->
+                            <div class="card-white border border-slate-100/50 shadow-sm relative">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h2 class="section-title">EvoluÃ§Ã£o: Valor vs Quantidade</h2>
+                                        <p class="section-subtitle">Comparativo mensal de investimento e volume de
+                                            pagamentos.</p>
+                                    </div>
+                                    <button onclick="toggleEvolucaoView()" class="btn-toggle-view"
+                                        id="btn-toggle-evolucao">
+                                        <i class="fa-solid fa-table"></i>
+                                        <span>Ver Tabela</span>
+                                    </button>
+                                </div>
+
+                                <!-- GRÃFICO (padrÃ£o visÃ­vel) -->
+                                <div id="container-evolucao-grafico" class="h-[320px]">
+                                    <canvas id="chartValorVsQtd"></canvas>
+                                </div>
+
+                                <!-- TABELA (oculta inicialmente) -->
+                                <div id="container-evolucao-tabela" class="hidden overflow-x-auto">
+                                    <table class="w-full text-sm border-collapse">
+                                        <thead>
+                                            <tr class="bg-gradient-to-r from-[#76B82A] to-[#5A902C] text-white">
+                                                <th
+                                                    class="py-3 px-4 text-left font-black uppercase text-xs tracking-wider">
+                                                    MÃªs</th>
+                                                <th
+                                                    class="py-3 px-4 text-right font-black uppercase text-xs tracking-wider">
+                                                    Valor Total (R$)</th>
+                                                <th
+                                                    class="py-3 px-4 text-right font-black uppercase text-xs tracking-wider">
+                                                    Quantidade</th>
+                                                <th
+                                                    class="py-3 px-4 text-right font-black uppercase text-xs tracking-wider">
+                                                    Ticket MÃ©dio</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tableEvolucaoMensal" class="divide-y divide-slate-100">
+                                            <tr>
+                                                <td colspan="4" class="py-10 text-center text-slate-400 italic">
+                                                    Carregando dados...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr class="bg-slate-100 font-black text-slate-800">
+                                                <td class="py-3 px-4 text-left uppercase text-xs">TOTAL GERAL</td>
+                                                <td id="totalValor" class="py-3 px-4 text-right text-lg">R$ 0,00</td>
+                                                <td id="totalQtd" class="py-3 px-4 text-right text-lg">0</td>
+                                                <td id="totalMedia" class="py-3 px-4 text-right text-lg">R$ 0,00</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Panorama das SituaÃ§Ãµes (Toggle entre GrÃ¡fico e Tabela) -->
+                            <div class="card-white border border-slate-100/50 shadow-sm">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h2 class="section-title" id="titulo-panorama">Tabela de SituaÃ§Ãµes (Mensal)</h2>
+                                        <p class="section-subtitle">Volume total de pessoas por categoria na safra
+                                            selecionada.</p>
+                                    </div>
+                                    <button onclick="toggleSituacaoView()" class="btn-toggle-view" id="btn-toggle-sit">
+                                        <i class="fa-solid fa-table"></i>
+                                        <span>Ver GrÃ¡fico</span>
+                                    </button>
+                                </div>
+
+                                <!-- Container GrÃ¡fico (Oculto inicialmente para mostrar a tabela do print) -->
+                                <div id="container-grafico-sit" class="h-[320px] hidden">
+                                    <canvas id="chartSituacoes"></canvas>
+                                </div>
+
+                                <!-- Container Tabela (VisÃ­vel por padrÃ£o conforme o print) -->
+                                <div id="container-tabela-sit" class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse border-spacing-0">
+                                        <thead>
+                                            <tr
+                                                class="text-[#94a3b8] text-[9px] font-black uppercase tracking-widest border-b border-slate-100">
+                                                <th class="py-4 px-2 w-[180px]">SituaÃ§Ã£o</th>
+                                                <th class="py-4 px-1 text-center">Abr</th>
+                                                <th class="py-4 px-1 text-center">Mai</th>
+                                                <th class="py-4 px-1 text-center">Jun</th>
+                                                <th class="py-4 px-1 text-center">Jul</th>
+                                                <th class="py-4 px-1 text-center">Ago</th>
+                                                <th class="py-4 px-1 text-center">Set</th>
+                                                <th class="py-4 px-1 text-center">Out</th>
+                                                <th class="py-4 px-1 text-center">Nov</th>
+                                                <th class="py-4 px-1 text-center">Dez</th>
+                                                <th class="py-4 px-1 text-center">Jan</th>
+                                                <th class="py-4 px-1 text-center">Fev</th>
+                                                <th class="py-4 px-1 text-center">Mar</th>
+                                                <th class="py-4 px-2 text-right">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="body-sit-mensal"
+                                            class="text-[10px] font-black text-slate-700 divide-y divide-slate-50">
+                                            <!-- Preenchido via JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div> <!-- End Left Column -->
+
+                        <!-- Right Column: KPIs (3 cols) -->
+                        <div class="col-span-3 space-y-4">
+
+                            <!-- KPI 1: Bolsistas Ativos -->
+                            <div onclick="filterTableByCategory('ativos')"
+                                class="relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 rounded-[18px] p-4 bg-gradient-to-br from-slate-800 to-slate-900 shadow-xl shadow-slate-200/50 cursor-pointer">
+                                <div class="relative z-10 flex justify-between items-start">
+                                    <div>
+                                        <p
+                                            class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 opacity-80">
+                                            Bolsistas Ativos</p>
+                                        <h3 id="kpi-ativos" class="text-3xl font-black text-white tracking-tight">0</h3>
+                                    </div>
+                                    <div
+                                        class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-lg text-white border border-white/5">
+                                        <i class="fa-solid fa-users"></i>
+                                    </div>
+                                </div>
+                                <div class="absolute -bottom-6 -right-6 w-32 h-32 bg-white/5 rounded-full blur-2xl">
+                                </div>
+                            </div>
+
+                            <!-- KPI 2: PendÃªncia de Pagamento -->
+                            <div onclick="filterTableByCategory('pendentes')"
+                                class="relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 rounded-[18px] p-4 bg-gradient-to-br from-[#f59e0b] to-[#d97706] shadow-xl shadow-orange-200/50 cursor-pointer">
+                                <div class="relative z-10 flex justify-between items-start">
+                                    <div>
+                                        <p
+                                            class="text-[9px] font-black text-amber-100 uppercase tracking-widest mb-1 opacity-80">
+                                            PendÃªncia Pagto (MÃªs)</p>
+                                        <h3 id="kpi-novos" class="text-3xl font-black text-white tracking-tight">0</h3>
+                                    </div>
+                                    <div
+                                        class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-lg text-white border border-white/10">
+                                        <i class="fa-solid fa-circle-exclamation"></i>
+                                    </div>
+                                </div>
+                                <div class="absolute -bottom-6 -right-6 w-32 h-32 bg-white/5 rounded-full blur-2xl">
+                                </div>
+                            </div>
+
+                            <!-- KPI 3: Investimento na Safra -->
+                            <div
+                                class="relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 rounded-[18px] p-4 bg-gradient-to-br from-slate-700 to-slate-800 shadow-xl shadow-slate-200/50">
+                                <div class="relative z-10 flex justify-between items-start">
+                                    <div>
+                                        <p
+                                            class="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1 opacity-80">
+                                            Investimento Safra</p>
+                                        <h3 id="kpi-ticket" class="text-2xl font-black text-white tracking-tight">R$ 0
+                                        </h3>
+                                    </div>
+                                    <div
+                                        class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-lg text-white border border-white/5">
+                                        <i class="fa-solid fa-chart-line"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- PerÃ­odo e Unidades Side Card -->
+                            <div class="card-white !p-3 border border-slate-100 shadow-sm">
+                                <div class="mb-2">
+                                    <h2 class="text-[10px] font-black text-slate-700 uppercase tracking-widest">Detalhes
+                                        por Diretoria</h2>
+                                </div>
+                                <div
+                                    class="table-container !rounded-lg !shadow-none !border border-slate-50 overflow-hidden">
+                                    <table class="!text-[9px] w-full text-left">
+                                        <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                                            <tr>
+                                                <th class="py-1 px-2 uppercase tracking-wider">Unidade</th>
+                                                <th class="py-1 px-2 uppercase tracking-wider text-center">Qtd</th>
+                                                <th class="py-1 px-2 uppercase tracking-wider text-right">Valor</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="table-detalhes-diretoria" class="text-slate-600"></tbody>
+                                    </table>
+                                </div>
+                                <div
+                                    class="flex justify-between items-center mt-2 pt-2 border-t border-slate-50 text-[9px]">
+                                    <span class="text-slate-400 font-bold uppercase">Ticket MÃ©dio (Mensal)</span>
+                                    <strong id="kpi-total" class="text-slate-800 font-black">R$ 0,00</strong>
+                                </div>
+                            </div>
+                        </div> <!-- End Right Column -->
+                    </div> <!-- End Grid -->
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- â•â•â•â•â•â•â• VIEW: PERFIL â•â•â•â•â•â•â• -->
+        <div id="view-perfil" class="page-section hidden-section animate-in">
+            <div class="w-full max-w-full">
+                <!-- Header do Perfil -->
+                <div class="flex items-start justify-between mb-8">
+                    <div class="flex items-center gap-8">
+                        <div class="w-24 h-24 rounded-full bg-slate-200 flex items-center justify-center text-3xl text-slate-500 font-bold border-4 border-white shadow-lg"
+                            id="profile-pfp">
+                            -
+                        </div>
+                        <div>
+                            <h2 id="profile-name"
+                                class="text-3xl font-black text-slate-800 tracking-tight leading-tight">-</h2>
+                            <div class="flex items-center gap-3 mt-2">
+                                <span id="profile-status-badge" class="badge">ATIVO</span>
+                                <span
+                                    class="text-xs font-bold text-slate-400 uppercase tracking-widest px-3 py-1 bg-slate-100 rounded-lg">Bolsista
+                                    Cocal</span>
+                            </div>
+                            <div class="flex gap-6 mt-4">
+                                <p class="text-xs font-bold text-slate-500 uppercase tracking-wide"><i
+                                        class="fas fa-id-card mr-2 text-slate-400"></i> <span
+                                        id="profile-matricula">-</span></p>
+                                <p class="text-xs font-bold text-slate-500 uppercase tracking-wide"><i
+                                        class="fas fa-building mr-2 text-slate-400"></i> <span
+                                        id="profile-diretoria">-</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right bg-white px-8 py-4 rounded-2xl shadow-sm border border-slate-100">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total
+                            investido</p>
+                        <h3 id="profile-total-reembolsado" class="text-3xl font-black text-[#76B82A] tracking-tighter">
+                            R$ 0,00</h3>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-12 gap-8">
+                    <!-- Coluna Esquerda: InformaÃ§Ãµes AcadÃªmicas -->
+                    <div class="col-span-4 space-y-6">
+                        <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                            <h3
+                                class="text-xs font-black text-slate-800 uppercase tracking-widest mb-8 flex items-center gap-3">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center">
+                                    <i class="fas fa-graduation-cap"></i>
+                                </div>
+                                Dados AcadÃªmicos
+                            </h3>
+                            <div id="profile-curso-info" class="space-y-6">
+                                <!-- Populated via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Card de Cadastro Manual -->
+                        <div class="bg-slate-800 p-8 rounded-3xl shadow-lg text-white">
+                            <h3
+                                class="text-xs font-black text-white uppercase tracking-widest mb-6 flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-white/10 text-white flex items-center justify-center">
+                                    <i class="fas fa-plus"></i>
+                                </div>
+                                Novo LanÃ§amento
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label
+                                            class="text-[10px] font-bold text-white/50 uppercase block mb-2">MÃªs</label>
+                                        <select id="input-hist-mes"
+                                            class="w-full bg-slate-700 border-none rounded-xl text-xs font-bold text-white px-4 py-3 outline-none focus:ring-2 ring-[#76B82A]">
+                                            <option value="1">Janeiro</option>
+                                            <option value="2">Fevereiro</option>
+                                            <option value="3">MarÃ§o</option>
+                                            <option value="4">Abril</option>
+                                            <option value="5">Maio</option>
+                                            <option value="6">Junho</option>
+                                            <option value="7">Julho</option>
+                                            <option value="8">Agosto</option>
+                                            <option value="9">Setembro</option>
+                                            <option value="10">Outubro</option>
+                                            <option value="11">Novembro</option>
+                                            <option value="12">Dezembro</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label
+                                            class="text-[10px] font-bold text-white/50 uppercase block mb-2">Ano</label>
+                                        <input type="number" id="input-hist-ano" value="2026"
+                                            class="w-full bg-slate-700 border-none rounded-xl text-xs font-bold text-white px-4 py-3 outline-none focus:ring-2 ring-[#76B82A]">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-white/50 uppercase block mb-2">Valor
+                                        (R$)</label>
+                                    <input type="number" step="0.01" id="input-hist-valor" placeholder="0,00"
+                                        class="w-full bg-slate-700 border-none rounded-xl text-xs font-bold text-white px-4 py-3 outline-none focus:ring-2 ring-[#76B82A]">
+                                </div>
+                                <div class="col-span-2 mt-2">
+                                    <label class="text-[10px] font-bold text-white/50 uppercase block mb-2">ObservaÃ§Ã£o
+                                        (Opcional)</label>
+                                    <textarea id="input-hist-obs" rows="2"
+                                        placeholder="Motivo do lanÃ§amento manual, detalhes..."
+                                        class="w-full bg-slate-700 border-none rounded-xl text-xs font-medium text-white px-4 py-3 outline-none focus:ring-2 ring-[#76B82A] resize-none"></textarea>
+                                </div>
+                                <button onclick="addManualHistory()"
+                                    class="w-full py-4 bg-[#76B82A] hover:bg-[#5A9033] text-white font-black rounded-xl text-[10px] uppercase tracking-widest transition-all mt-2 shadow-lg shadow-[#76B82A]/20">
+                                    Adicionar HistÃ³rico
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Coluna Direita: GrÃ¡fico e HistÃ³rico -->
+                    <div class="col-span-8 space-y-6">
+                        <!-- GrÃ¡fico Mensal -->
+                        <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                            <div class="flex items-center gap-3 mb-8">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Investimento
+                                    Mensal</h3>
+                            </div>
+                            <div class="h-[300px] w-full bg-slate-50/50 rounded-2xl p-4 border border-slate-50">
+                                <canvas id="chartProfileEvolution"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Tabela de HistÃ³rico -->
+                        <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                            <h3
+                                class="text-xs font-black text-slate-800 uppercase tracking-widest mb-8 flex items-center gap-3">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center">
+                                    <i class="fas fa-history"></i>
+                                </div>
+                                HistÃ³rico de Pagamentos
+                            </h3>
+                            <div class="table-container !rounded-[20px] !shadow-none !border border-slate-100">
+                                <table class="!text-xs w-full text-left">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-400 border-b border-slate-100">
+                                            <th class="py-4 px-6 font-black uppercase tracking-wider text-[10px]">
+                                                CompetÃªncia</th>
+                                            <th class="py-4 px-6 font-black uppercase tracking-wider text-[10px]">
+                                                Valor</th>
+                                            <th class="py-4 px-6 font-black uppercase tracking-wider text-[10px]">
+                                                Data Registro</th>
+                                            <th class="py-4 px-6 font-black uppercase tracking-wider text-[10px]">
+                                                Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="profile-history-table">
+                                        <!-- Populated via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- â•â•â•â•â•â•â• VIEW: TABELA â•â•â•â•â•â•â• -->
+        <div id="view-tabela" class="page-section hidden-section animate-in">
+            <div class="w-full max-w-full">
+                <div class="flex items-end justify-between mb-10">
+                    <div class="flex-1 max-w-2xl">
+                        <label
+                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block ml-1">Filtro
+                            de Colaboradores</label>
+                        <input type="text" id="searchTerm" onkeyup="renderTable()"
+                            placeholder="Pesquisar por nome, matrÃ­cula ou diretoria..."
+                            class="w-full !p-5 !bg-white !border-none rounded-2xl shadow-sm shadow-slate-200/50">
+                    </div>
+                    <button onclick="exportToExcel()"
+                        class="bg-slate-900 text-white px-10 py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-slate-200">Exportar
+                        Base</button>
+                </div>
+                <div class="table-container !rounded-[30px] !border-none !shadow-2xl !shadow-slate-200/40">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>IdentificaÃ§Ã£o</th>
+                                <th>Diretoria / Unidade</th>
+                                <th>FormaÃ§Ã£o e Curso</th>
+                                <th>Ciclo</th>
+                                <th>Investimento</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- â•â•â•â•â•â•â• VIEW: CONFIGURAÃ‡Ã•ES (IMPORT SECTION) â•â•â•â•â•â•â• -->
+        <div id="view-conferencia" class="page-section hidden-section animate-in">
+            <div class="w-full max-w-full">
+                <div class="flex items-center justify-between mb-12">
+                    <div>
+                        <h2 class="text-3xl font-black font-outfit text-slate-800 tracking-tight">Painel de
+                            SincronizaÃ§Ã£o</h2>
+                        <p class="text-slate-400 text-sm font-bold uppercase tracking-widest mt-1">GestÃ£o de Bases e
+                            Arquivos Locais</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <button onclick="limparCache()"
+                            class="px-8 py-4 bg-red-50 text-red-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-100 transition-all border border-red-100">
+                            <i class="fas fa-trash-can mr-2"></i> Limpar Cache
+                        </button>
+                        <button onclick="autoConnect()"
+                            class="px-8 py-4 bg-[#76B82A] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-[#76B82A]/20">
+                            <i class="fas fa-sync-alt mr-2"></i> Atualizar Dados
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-8">
+                    <!-- Card 1: Base Bolsas -->
+                    <div class="card-white !p-10 border-b-8 border-[#76B82A]">
+                        <div
+                            class="w-16 h-16 bg-[#76B82A]/10 text-[#76B82A] rounded-2xl flex items-center justify-center text-3xl mb-8">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <h3 class="text-xl font-black text-slate-800 mb-2">Base Principal</h3>
+                        <p class="text-slate-400 text-sm font-medium mb-10">Controle mestre de bolsas, cursos e
+                            situaÃ§Ãµes cadastrais.</p>
+                        <button onclick="triggerImport('base')"
+                            class="w-full py-4 bg-slate-50 text-slate-600 font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all border border-slate-100">
+                            Importar Excel
+                        </button>
+                        <input type="file" id="input-base-bolsas" class="hidden" accept=".xlsx"
+                            onchange="handleFileImport(this, 'base')">
+                    </div>
+
+                    <!-- Card 2: Organograma -->
+                    <div class="card-white !p-10 border-b-8 border-[#3b82f6]">
+                        <div
+                            class="w-16 h-16 bg-[#3b82f6]/10 text-[#3b82f6] rounded-2xl flex items-center justify-center text-3xl mb-8">
+                            <i class="fas fa-sitemap"></i>
+                        </div>
+                        <h3 class="text-xl font-black text-slate-800 mb-2">Organograma</h3>
+                        <p class="text-slate-400 text-sm font-medium mb-10">Mapeamento hierÃ¡rquico, diretorias e
+                            centros de custo.</p>
+                        <button onclick="triggerImport('sucessao')"
+                            class="w-full py-4 bg-slate-50 text-slate-600 font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all border border-slate-100">
+                            Importar Excel
+                        </button>
+                        <input type="file" id="input-sucessao" class="hidden" accept=".xlsx"
+                            onchange="handleFileImport(this, 'sucessao')">
+                    </div>
+
+                    <!-- Card 3: Pagamentos -->
+                    <div class="card-white !p-10 border-b-8 border-[#ef4444]">
+                        <div
+                            class="w-16 h-16 bg-[#ef4444]/10 text-[#ef4444] rounded-2xl flex items-center justify-center text-3xl mb-8">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </div>
+                        <h3 class="text-xl font-black text-slate-800 mb-2">Pagamentos</h3>
+                        <p class="text-slate-400 text-sm font-medium mb-10">HistÃ³rico de reembolsos e conferÃªncias
+                            realizadas.</p>
+                        <button onclick="triggerImport('penalidades')"
+                            class="w-full py-4 bg-slate-50 text-slate-600 font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all border border-slate-100">
+                            Importar Excel
+                        </button>
+                        <input type="file" id="input-penalidades" class="hidden" accept=".xlsx"
+                            onchange="handleFileImport(this, 'penalidades')">
+                    </div>
+                </div>
+
+                <div class="mt-12 p-8 bg-amber-50 border border-amber-100 rounded-3xl flex items-center gap-8">
+                    <div
+                        class="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-xl">
+                        <i class="fas fa-terminal"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-black text-amber-900 uppercase tracking-widest">Dica de SincronizaÃ§Ã£o
+                        </p>
+                        <p class="text-xs text-amber-700 font-medium">O sistema tenta conectar automaticamente os
+                            arquivos da pasta <code
+                                class="bg-amber-200/50 px-2 py-0.5 rounded font-bold">BASES.BOLSAS</code> ao iniciar
+                            via VBS.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- â•â•â•â•â•â•â• VIEW: HISTÃ“RICO â•â•â•â•â•â•â• -->
+        <div id="view-historico" class="page-section hidden-section animate-in">
+            <div class="w-full max-w-full">
+                <div class="flex items-center justify-between mb-12">
+                    <div>
+                        <h2 class="text-4xl font-black font-outfit text-slate-800 tracking-tighter">HistÃ³rico
+                            Financeiro</h2>
+                        <p class="text-slate-400 text-sm font-bold uppercase tracking-widest mt-1">AnÃ¡lise de
+                            Pagamentos e Safra</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <select id="filterHistoryDir" onchange="updateHistoryDashboard()"
+                            class="px-6 py-4 bg-white border-none rounded-2xl shadow-sm text-xs font-bold uppercase min-w-[200px]">
+                            <option value="todas">Todas Diretorias</option>
+                        </select>
+                        <select id="filterSafra" onchange="updateHistoryDashboard()"
+                            class="px-6 py-4 bg-white border-none rounded-2xl shadow-sm text-xs font-bold uppercase">
+                            <option value="todas">Todas as Safras</option>
+                            <option value="2024/2025">Safra 24/25</option>
+                            <option value="2025/2026" selected>Safra 25/26</option>
+                        </select>
+
+
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-12 gap-8 mb-8">
+                    <div class="col-span-4 card-white !bg-[var(--bg-dark)] !text-white">
+                        <p class="text-[10px] font-black text-white/40 uppercase tracking-widest mb-6">Total
+                            Realizado (Safra)</p>
+                        <h4 id="historyRealizado" class="text-4xl font-black tracking-tighter mb-2">R$ 0,00</h4>
+                        <p class="text-xs text-[#76B82A] font-bold">Pagamentos confirmados</p>
+                    </div>
+                    <div class="col-span-4 card-white">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Saldo Budget
+                            Anual</p>
+                        <h4 id="historySaldo" class="text-4xl font-black text-slate-800 tracking-tighter mb-2">R$
+                            0,00</h4>
+                        <p class="text-xs text-slate-400 font-medium">Provisionado vs Realizado</p>
+                    </div>
+                    <div class="col-span-4 card-white">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">% UtilizaÃ§Ã£o
+                            Budget</p>
+                        <h4 id="historyUtilizacao" class="text-4xl font-black text-slate-800 tracking-tighter mb-2">
+                            0%</h4>
+                        <div class="w-full h-2 bg-slate-100 rounded-full mt-4 overflow-hidden">
+                            <div id="historyBar" class="h-full bg-[#76B82A]" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-12 gap-8">
+                    <div class="col-span-8 card-white">
+                        <h3 class="section-title">EvoluÃ§Ã£o de Pagamentos</h3>
+                        <div class="h-[350px]"><canvas id="chartHistoryEvolution"></canvas></div>
+                    </div>
+                    <div class="col-span-4 card-white">
+                        <h3 class="section-title">Share por Diretoria</h3>
+                        <div class="h-[300px]"><canvas id="chartHistoryShare"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- â•â•â•â•â•â•â• VIEW: CONFERÃŠNCIA LANÃ‡AMENTOS â•â•â•â•â•â•â• -->
+        <div id="view-conferencia-pagamento" class="page-section hidden-section animate-in">
+            <div class="max-w-[1200px] mx-auto">
+                <div class="grid grid-cols-12 gap-8">
+                    <div class="col-span-4 space-y-6">
+                        <div class="card-white !p-8">
+                            <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-6">Buscar
+                                Colaborador</h3>
+                            <div class="relative">
+                                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"></i>
+                                <input type="text" id="candidateSearch" onkeyup="searchCandidates(this.value)"
+                                    placeholder="Nome ou MatrÃ­cula..."
+                                    class="w-full pl-12 p-4 bg-slate-50 border-none rounded-2xl text-sm">
+                            </div>
+                            <div id="candidateResults" class="mt-6 max-h-[500px] overflow-y-auto space-y-2">
+                                <div class="p-6 text-center text-slate-400 italic text-sm">Digite acima para
+                                    buscar...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-span-8">
+                        <div id="atendimento-form-container"
+                            class="card-white !p-12 opacity-40 pointer-events-none transition-all">
+                            <div class="flex items-center justify-between mb-12">
+                                <div>
+                                    <h3 class="text-xl font-black text-slate-800 tracking-tight">ConferÃªncia Mensal
+                                    </h3>
+                                    <p class="text-xs text-slate-400 font-bold uppercase mt-1">ValidaÃ§Ã£o de
+                                        Reembolso â€¢ <span id="currentMonthYear">Fev 2026</span></p>
+                                </div>
+                                <div id="selected-candidate-badge" class="hidden">
+                                    <span class="badge badge-success">Selecionado</span>
+                                </div>
+                            </div>
+
+                            <div id="selected-candidate-info" class="mb-12 hidden">
+                                <!-- Info will be injected here -->
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-6 mb-12">
+                                <button onclick="setPaymentStatus('PAGO')"
+                                    class="flex flex-col items-center justify-center p-8 bg-green-50 text-green-700 rounded-[32px] border-2 border-transparent hover:border-green-200 transition-all gap-3 group">
+                                    <div
+                                        class="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-all">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span class="font-black text-xs uppercase tracking-widest">PAGO</span>
+                                </button>
+                                <button onclick="setPaymentStatus('PENDENTE')"
+                                    class="flex flex-col items-center justify-center p-8 bg-amber-50 text-amber-600 rounded-[32px] border-2 border-transparent hover:border-amber-200 transition-all gap-3 group">
+                                    <div
+                                        class="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-all">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                    <span class="font-black text-xs uppercase tracking-widest">PENDENTE</span>
+                                </button>
+                                <button onclick="setPaymentStatus('PULAR')"
+                                    class="flex flex-col items-center justify-center p-8 bg-slate-50 text-slate-400 rounded-[32px] border-2 border-transparent hover:border-slate-200 transition-all gap-3 group">
+                                    <div
+                                        class="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-all">
+                                        <i class="fas fa-forward"></i>
+                                    </div>
+                                    <span class="font-black text-xs uppercase tracking-widest">PULAR</span>
+                                </button>
+                            </div>
+
+                            <form onsubmit="saveNote(event)">
+                                <input type="hidden" id="selectedMatricula">
+                                <div class="mb-8">
+                                    <label
+                                        class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">AnotaÃ§Ãµes
+                                        / ObservaÃ§Ãµes</label>
+                                    <select id="noteType"
+                                        class="w-full p-4 bg-slate-50 border-none rounded-xl mb-4 font-bold text-slate-600 text-sm">
+                                        <option value="Atendimento">Atendimento Geral</option>
+                                        <option value="DocumentaÃ§Ã£o">PendÃªncia Documental</option>
+                                        <option value="Pagamento">DÃºvida sobre Valores</option>
+                                        <option value="ConclusÃ£o">Formatura / ConclusÃ£o</option>
+                                    </select>
+                                    <textarea id="noteContent" rows="4"
+                                        placeholder="Descreva aqui o detalhe da conferÃªncia..."
+                                        class="w-full p-6 bg-slate-50 border-none rounded-[24px] text-sm resize-none"></textarea>
+                                </div>
+                            </form>
+
+                            <div id="candidateNotes" class="mt-12 hidden">
+                                <div class="border-t border-slate-100 pt-10">
+                                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">
+                                        HistÃ³rico Recente de Notas</h4>
+                                    <div id="selectedNotesList" class="space-y-4"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="view-candidatos" class="page-section hidden-section animate-in">
+            <div class="max-w-[1000px] mx-auto">
+                <div class="card-white !p-12">
+                    <h2 class="text-3xl font-black font-outfit text-slate-800 mb-2">Novo Cadastro</h2>
+                    <p class="text-slate-400 font-bold text-sm uppercase mb-12">Adicionar novo colaborador ao
+                        programa</p>
+
+                    <form id="form-cadastro" onsubmit="handleFormCadastro(event)" class="grid grid-cols-2 gap-8">
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">MatrÃ­cula</label>
+                            <input type="text" name="matricula" required
+                                class="w-full p-4 bg-slate-50 border-none rounded-xl">
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">Nome
+                                Completo</label>
+                            <input type="text" name="nome" required
+                                class="w-full p-4 bg-slate-50 border-none rounded-xl">
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">Diretoria</label>
+                            <select name="diretoria" class="w-full p-4 bg-slate-50 border-none rounded-xl">
+                                <option value="AGROINDUSTRIAL">AGROINDUSTRIAL</option>
+                                <option value="COMERCIAL">COMERCIAL</option>
+                                <option value="FINANCEIRA">FINANCEIRA</option>
+                                <option value="RH">RH</option>
+                                <option value="TECNOLOGIA">TECNOLOGIA</option>
+                            </select>
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">Curso /
+                                Programa</label>
+                            <input type="text" name="curso" required
+                                class="w-full p-4 bg-slate-50 border-none rounded-xl">
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">InstituiÃ§Ã£o
+                                (IES)</label>
+                            <input type="text" name="instituicao" required
+                                class="w-full p-4 bg-slate-50 border-none rounded-xl">
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">NÃ­vel de
+                                Ensino</label>
+                            <select name="nivel" class="w-full p-4 bg-slate-50 border-none rounded-xl">
+                                <option value="GRADUAÃ‡ÃƒO">GRADUAÃ‡ÃƒO</option>
+                                <option value="PÃ“S-GRADUAÃ‡ÃƒO">PÃ“S-GRADUAÃ‡ÃƒO</option>
+                                <option value="MESTRADO/DOUTORADO">MESTRADO/DOUTORADO</option>
+                                <option value="TÃ‰CNICO">TÃ‰CNICO</option>
+                                <option value="IDIOMAS">IDIOMAS</option>
+                            </select>
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">Valor
+                                Mensalidade (R$)</label>
+                            <input type="number" step="0.01" name="mensalidade" required
+                                class="w-full p-4 bg-slate-50 border-none rounded-xl">
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">% de
+                                Bolsa</label>
+                            <input type="number" name="porcentagem" value="50" required
+                                class="w-full p-4 bg-slate-50 border-none rounded-xl">
+                        </div>
+
+                        <div class="col-span-2 mt-8">
+                            <button type="submit"
+                                class="w-full py-5 bg-[#76B82A] text-white font-black rounded-2xl shadow-xl shadow-[#76B82A]/20 hover:scale-[1.02] transition-all">FINALIZAR
+                                CADASTRO</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        </div>
+    </main>
+
+    <script src="js/toggle_evolucao.js"></script>
+    <script src="js/app.js?v=6"></script>
+</body>
+
+</html>³ *cascade08³À*cascade08ÀÈ *cascade08
+ÈÉ ÉÓ *cascade08
+Óç çé*cascade08
+éò òÂ *cascade08
+ÂÍ ÍÏ*cascade08
+ÏÜ Üø *cascade08øûûü *cascade08
+üƒ ƒ *cascade08ŸŸ  *cascade08 ¡¡¦ *cascade08¦©©ª *cascade08ª®®° *cascade08°±±² *cascade08²»*cascade08»É *cascade08ÉÌÌĞ *cascade08ĞÑ *cascade08
+ÑÕ ÕÖ*cascade08
+Öà àá*cascade08
+áâ âã*cascade08
+ãí íî *cascade08îˆˆŠ *cascade08Š§§¨ *cascade08¨À *cascade08ÀÁÁÂ *cascade08ÂÉÉÊ *cascade08ÊËËÌ *cascade08ÌĞĞÒ *cascade08ÒÔÔÕ *cascade08
+ÕÙ ÙÚ *cascade08
+ÚÜ Üİ *cascade08İŞŞß *cascade08
+ßå åù *cascade08ùŠ*cascade08Š” *cascade08”–*cascade08–™ *cascade08™›*cascade08›¤ *cascade08
+¤§ §´ *cascade08
+´À ÀÂ*cascade08Âì *cascade08ìî*cascade08îñ *cascade08ñò*cascade08ò‡
+ *cascade08‡
+ˆ
+ˆ
+•
+ *cascade08•
+–
+–
+¤
+ *cascade08
+¤
+§
+ §
+´
+*cascade08´
+º
+ *cascade08º
+½
+½
+¿
+ *cascade08¿
+Ã
+Ã
+Å
+ *cascade08
+Å
+Ñ
+ Ñ
+Ô
+ *cascade08Ô
+Õ
+Õ
+ó
+ *cascade08
+ó
+ú
+ ú
+û
+ *cascade08
+û
+‚ ‚ˆ *cascade08ˆŠŠ *cascade08“*cascade08
+“” ”•*cascade08
+•– –®*cascade08
+®° °º*cascade08
+º¿ ¿À *cascade08ÀÂÂÃ *cascade08ÃÄ*cascade08
+ÄÅ ÅÍ*cascade08
+ÍÎ ÎĞ*cascade08
+ĞÑ ÑÜ*cascade08Üà *cascade08àà*cascade08àà*cascade08
+àâ âï *cascade08ïôôö *cascade08öûûı *cascade08ı‚‚’ *cascade08
+’ ± *cascade08
+±µ µ· *cascade08·¸¸¹ *cascade08¹¼¼À *cascade08ÀÂÂÈ *cascade08ÈÌÌÎ *cascade08ÎÕÕÖ *cascade08ÖØØÙ *cascade08ÙÛÛİ *cascade08
+İß ßå*cascade08
+åæ æç*cascade08
+çğ ğñ *cascade08
+ñó óô *cascade08ôŠ *cascade08Š— *cascade08—œ*cascade08
+œª ª«*cascade08
+«Á ÁÖ *cascade08Ö××Ø *cascade08ØÙÙİ *cascade08İŞŞà *cascade08àççì *cascade08ìííî *cascade08îññô *cascade08ôøøù *cascade08ùûûü *cascade08üııÿ *cascade08ÿƒƒ… *cascade08…††‡ *cascade08‡Œ*cascade08
+Œ ¢ *cascade08¢¯ *cascade08
+¯² ²·*cascade08
+·Ã ÃÄ*cascade08
+ÄÙ Ùï *cascade08ïòòó *cascade08óøøù *cascade08ù‰ *cascade08‰ *cascade08• *cascade08•––— *cascade08—œœ¢ *cascade08¢¦¦§ *cascade08§¨¨© *cascade08©« *cascade08«­ *cascade08­¯*cascade08¯°°± *cascade08
+±· ·¹ *cascade08¹¼*cascade08
+¼¾ ¾Á*cascade08
+ÁÂ ÂÃ*cascade08
+ÃÍ ÍÎ*cascade08
+ÎĞ ĞÒ *cascade08ÒÓÓî *cascade08îòòô *cascade08ôõõö *cascade08öùùû *cascade08û*cascade08¢ *cascade08
+¢° °± *cascade08±²²´ *cascade08´µµ¼ *cascade08¼¿¿Á *cascade08
+ÁÃ ÃÆ*cascade08
+ÆÇ ÇÈ *cascade08ÈÌÌÏ *cascade08
+ÏÙ ÙÚ*cascade08
+Úí íî*cascade08îù *cascade08ùûûü *cascade08üşşÿ *cascade08ÿ‚‚• *cascade08•––˜ *cascade08˜*cascade08  *cascade08 ¡¡² *cascade08²³³´ *cascade08´½*cascade08
+½¾ ¾Ñ *cascade08Ñææõ *cascade08õ÷÷• *cascade08
+•¦ ¦§ *cascade08
+§ª ª¬*cascade08
+¬® ®²*cascade08
+²µ µĞ *cascade08ĞÒÒÖ *cascade08Öß *cascade08ßààâ *cascade08âääæ *cascade08æççé *cascade08éê*cascade08êëëí *cascade08íî *cascade08îğ *cascade08ğññó *cascade08óôôö *cascade08ö÷÷ø *cascade08øùùû *cascade08û‚ *cascade08‚ƒƒ„ *cascade08„††  *cascade08 ¢*cascade08¢£ *cascade08£§*cascade08§¨ *cascade08¨ª*cascade08
+ª¬ ¬­*cascade08­® *cascade08®¯ *cascade08¯±*cascade08±·*cascade08·È *cascade08ÈË*cascade08ËÓ *cascade08ÓÖ*cascade08Öİ *cascade08İß *cascade08ßà*cascade08àá *cascade08áâ*cascade08
+âä äæ *cascade08æç*cascade08çó *cascade08óö*cascade08ö÷ *cascade08÷‰*cascade08‰Š *cascade08Š™*cascade08™¡ *cascade08¡¢*cascade08¢£ *cascade08£§*cascade08§¨ *cascade08¨ª*cascade08ª« *cascade08«¯*cascade08¯° *cascade08
+°± ±²*cascade08
+²³ ³´*cascade08
+´¶ ¶º*cascade08
+º» »Ã*cascade08
+ÃÄ ÄÅ*cascade08
+ÅÆ ÆÈ*cascade08
+ÈË ËÎ*cascade08
+ÎÏ ÏĞ *cascade08Ğú*cascade08
+úû ûü*cascade08
+üş ş„*cascade08„… *cascade08…Š*cascade08
+Š *cascade08
+ *cascade08‘ *cascade08‘ªª« *cascade08«µ*cascade08µ· *cascade08·»*cascade08
+»¿ ¿Ş
+Şà àâ *cascade08âääå *cascade08
+åï ïñ *cascade08ñòò††‘ *cascade08‘››¤ *cascade08
+¤» »¼ *cascade08
+¼Ë ËÌ *cascade08ÌØØÙ *cascade08ÙÛÛİ *cascade08İááâ *cascade08âöö÷ *cascade08÷úúû *cascade08ûƒƒ„ *cascade08„……† *cascade08†‡‡ *cascade08‘‘’ *cascade08’““” *cascade08”••— *cascade08—››œ *cascade08œ³ *cascade08³µµ¶ *cascade08¶ÀÀÁ *cascade08ÁÇÇÈ *cascade08
+ÈÎ ÎĞ *cascade08
+ĞÑ ÑÒ*cascade08
+ÒÓ ÓÕ*cascade08
+ÕÖ ÖØ*cascade08
+ØÙ Ùâ*cascade08âğ *cascade08ğûûˆ *cascade08ˆ’’“ *cascade08
+“˜ ˜›*cascade08›œ *cascade08œ*cascade08£ *cascade08£¥*cascade08¥­ *cascade08­®*cascade08®´ *cascade08
+´Ù Ùë *cascade08ëííõ *cascade08õøøú *cascade08úûûı *cascade08ışş€ *cascade08
+€† †ˆ *cascade08ˆŠŠ‹ *cascade08‹*cascade08‘ *cascade08‘•*cascade08
+•— —™*cascade08
+™š š¨ *cascade08
+¨Œ Œ¡*cascade08
+¡Ø Øå *cascade08åææé *cascade08éóóõ *cascade08õûûı *cascade08
+ıŒ Œ” *cascade08”šš *cascade08ŸŸ¨ *cascade08¨««¬ *cascade08¬°°Ä *cascade08ÄÆÆÇ *cascade08ÇÑÑÒ *cascade08
+ÒÛ ÛÜ *cascade08
+Üä äè *cascade08
+èú ú‰ *cascade08‰Ÿ *cascade08Ÿ¦¦§ *cascade08
+§¼ ¼Ä*cascade08
+ÄÑ Ñ× *cascade08
+×å åï *cascade08ïòòó *cascade08ó÷÷‹  *cascade08‹     *cascade08 ˜ ˜ ™  *cascade08
+™ ¢  ¢ ¤  *cascade08
+¤ «  « ¬  *cascade08
+¬ ¶  ¶ ¸  *cascade08¸ Ä  *cascade08Ä Ï Ï Ø  *cascade08Ø ä ä å  *cascade08å ë ë ì  *cascade08ì ó ó õ  *cascade08
+õ ‹! ‹!Œ!*cascade08
+Œ! ! 
+ !¡! ¡!¦!
+¦!¨! ¨!®!
+®!¯! ¯!±!
+±!³! ³!º!
+º!»! 
+»!¾! ¾!Ş!*cascade08
+Ş!ß! ß!à!à!ñ! *cascade08
+ñ!ö! ö!‹"*cascade08
+‹"•" •"–"
+–"™" ™"š"
+š"›" ›"œ"*cascade08
+œ"Ä" Ä"Å"*cascade08
+Å"å" å"æ"*cascade08
+æ"î" î"ï" *cascade08
+ï"ñ" ñ"ó"*cascade08
+ó"ô" ô"ö"
+ö"ø" ø"#*cascade08
+## 
+#‘# ‘#«#«#¬# *cascade08¬#­#­#®# *cascade08®#´#´#¶# *cascade08¶#¼#¼#½# *cascade08½#Á#Á#Â# *cascade08Â#É#É#Ê# *cascade08Ê#Ï#Ï#Ğ# *cascade08Ğ#Ø#Ø#Ù# *cascade08
+Ù#Ú# 
+Ú#Û# 
+Û#ç# ç#è# *cascade08
+è#€$ €$$ *cascade08$†$†$‡$ *cascade08‡$ˆ$ˆ$Š$ *cascade08
+Š$$ $$ *cascade08$‘$‘$’$ *cascade08’$–$–$—$ *cascade08
+—$˜$ ˜$›$*cascade08
+›$$ $¡$ *cascade08¡$§$§$¨$ *cascade08¨$±$±$²$ *cascade08
+²$Ê$ Ê$Ü$ *cascade08Ü$ø$ø$ù$ *cascade08
+ù$% %%*cascade08
+%”% ”%•% *cascade08•%Ÿ%Ÿ%¡% *cascade08
+¡%¦% ¦%§% *cascade08§%¬%¬%®% *cascade08®%¯%¯%»% *cascade08
+»%Ô% Ô%×%*cascade08×%í%í%î% *cascade08î%õ%õ%÷% *cascade08÷%û%û%ı% *cascade08ı%ÿ%ÿ%€& *cascade08€&‘&*cascade08‘&™& *cascade08™&&
+&& &Ÿ&*cascade08
+Ÿ& &  &¦&
+¦&§& §&¨&*cascade08
+¨&©& ©&ª&*cascade08
+ª&«& «&­&*cascade08
+­&°& °&±& *cascade08±&´&*cascade08´&¶& *cascade08¶&¹&¹&º& *cascade08º&½& *cascade08½&¾&*cascade08
+¾&Â& Â&Ä& *cascade08
+Ä&Å& Å&Æ&
+Æ&È& È&É& *cascade08É&Ê&*cascade08
+Ê&Ë& Ë&Ì&*cascade08
+Ì&Í& Í&Ï&
+Ï&Ô& Ô&Õ& *cascade08
+Õ&Ö& Ö&×&*cascade08×&Ø& *cascade08Ø&Û&
+Û&à& à&á&*cascade08
+á&å& å&æ&*cascade08
+æ&ç& ç&è&*cascade08
+è&ë& ë&ì&*cascade08
+ì&í& í&ï&*cascade08
+ï&ğ& ğ&÷& *cascade08÷&ø&ø&ù& *cascade08ù&ú&ú&û& *cascade08û&„'*cascade08
+„'…' …'¶'
+¶'·' ·'º'
+º'¼' ¼'Â'
+Â'Ã' Ã'Ä'*cascade08Ä'Ø' *cascade08Ø'Ú'Ú'Ü' *cascade08Ü'Ş'Ş'à' *cascade08à'ã'ã'ä' *cascade08ä'å'å'æ' *cascade08æ'ç'ç'è' *cascade08è'ê'ê'ë' *cascade08ë'í'í'î' *cascade08
+î'ù' ù'ú'*cascade08
+ú'€( €(( *cascade08(–(–(¡( *cascade08¡(©(©(¯( *cascade08¯(´(´(¶( *cascade08¶(¸(¸(¾( *cascade08¾(Â(Â(Ã( *cascade08Ã(Ò(Ò(Ó( *cascade08
+Ó(×( ×(Ø( *cascade08
+Ø(İ( İ(ß(*cascade08ß(à( *cascade08à(ï(ï(ğ( *cascade08ğ(ò(ò(ù( *cascade08ù(ş(ş(ÿ( *cascade08ÿ(‘)‘)’) *cascade08
+’)³) ³)´) *cascade08´)»)»)¼) *cascade08¼)¿)¿)ç) *cascade08
+ç)é) é)ê)*cascade08
+ê)ë) ë)* *cascade08*ƒ*ƒ*”* *cascade08”*”**cascade08”*”**cascade08
+”*õ* õ*ö* *cascade08ö*ÿ*ÿ*€+ *cascade08€+‰+‰+Š+ *cascade08Š+Œ+Œ+”+ *cascade08”+š+š+›+ *cascade08›+ + +¡+ *cascade08¡+£+£+¤+ *cascade08¤+¦+¦+©+ *cascade08©+ª+ª+«+ *cascade08
+«+¯+ ¯+¯+*cascade08
+¯+À+ À+Â+ *cascade08Â+Ã+Ã+Ë+ *cascade08Ë+Ò+Ò+Ö+ *cascade08Ö+Ø+ *cascade08Ø+Ù+Ù+Ú+ *cascade08Ú+Ü+Ü+İ+*cascade08İ+à+ *cascade08à+à+*cascade08à+á+ *cascade08
+á+ë+ ë+ì+ *cascade08
+ì+ø+ ø+ù+ *cascade08
+ù+ı+ ı+ÿ+ *cascade08ÿ+€,€,ƒ, *cascade08ƒ,„,„,†, *cascade08†,‰, *cascade08‰,œ,*cascade08œ,, *cascade08
+,, ,Ÿ, *cascade08
+Ÿ,´, ´,¶, *cascade08
+¶,·, ·,º, *cascade08º,Â, *cascade08Â,Ç, *cascade08
+Ç,È, È,Ê,*cascade08
+Ê,Ë, Ë,Ò,*cascade08
+Ò,Ó, Ó,Ü, *cascade08Ü,İ,İ,Ş, *cascade08Ş,ß, *cascade08ß,à,à,á, *cascade08á,â, *cascade08â,ã,ã,å, *cascade08
+å,æ, æ,ç, *cascade08ç,è,*cascade08è,ì, *cascade08ì,í,*cascade08í,„- *cascade08„-…- *cascade08…-Š-*cascade08
+Š-Œ- Œ-¦- *cascade08
+¦-§- §-Ê- *cascade08Ê-Ì-Ì-Ù- *cascade08Ù-Ú-*cascade08Ú-Û- *cascade08Û-Ü-Ü-è- *cascade08è-î- *cascade08î-ó-ó-ƒ. *cascade08
+ƒ.†. †.‡. *cascade08‡.ˆ.ˆ.‰. *cascade08
+‰.Œ. Œ.. *cascade08.. *cascade08...”. *cascade08
+”.•. •.™.*cascade08
+™.›. ›.Ä.
+Ä.Å. Å.Ç.*cascade08
+Ç.Ë. Ë.ë. *cascade08ë.ì.ì.ô. *cascade08ô.õ. *cascade08õ.ö. *cascade08ö.÷. *cascade08÷.ø.ø.ÿ. *cascade08ÿ.€/€/ƒ/ *cascade08ƒ/ˆ/ *cascade08ˆ//*cascade08// *cascade08/‘/‘/’/ *cascade08’/–/ *cascade08–/™/™/›/ *cascade08›/œ/œ// *cascade08/ / *cascade08 /¡/¡/¦/ *cascade08¦/¨/¨/©/ *cascade08©/ª/ *cascade08
+ª/¬/ ¬/®/ *cascade08®/°/ *cascade08°/²/²/³/ *cascade08³/´/´/¶/ *cascade08¶/¹/*cascade08
+¹/»/ »/Ä/Ä/â/ *cascade08â/å/ *cascade08
+å/æ/ æ/€0 *cascade08
+€0‚0 ‚0ƒ0*cascade08
+ƒ0„0 „0…0*cascade08
+…0†0 †0ˆ0 *cascade08ˆ0Š0*cascade08Š0‹0*cascade08‹00 *cascade080¢0 *cascade08
+¢0£0 £0²0*cascade08
+²0³0 ³0µ0*cascade08
+µ0¶0 ¶0¹0*cascade08
+¹0º0 º0»0*cascade08
+»0À0 À0Ã0*cascade08
+Ã0Ä0 Ä0Æ0*cascade08
+Æ0á0 á0å0*cascade08å0æ0 *cascade08æ0é0*cascade08é0ê0 *cascade08ê0ì0*cascade08ì0í0 *cascade08
+í0ğ0 ğ0ñ0*cascade08
+ñ0ò0 ò0ô0*cascade08
+ô0õ0 õ0÷0*cascade08
+÷0ù0 ù0ú0*cascade08
+ú0 1  1¤1*cascade08
+¤1Ê1 Ê1Ë1 *cascade08Ë1Ó1Ó1Ô1 *cascade08Ô1Û1*cascade08Û1Ü1 *cascade08
+Ü1ó1 ó1•2*cascade08
+•2Ç2 Ç2È2 *cascade08È2Ö2Ö2Ø2 *cascade08
+Ø2İ2 İ2æ2*cascade08
+æ2’3 ’3“3 *cascade08“3—3—3˜3 *cascade08˜333 3 *cascade08 3§3§3¨3 *cascade08¨3º3º3¿3 *cascade08¿3Á3Á3Â3 *cascade08Â3Å3Å3ë3 *cascade08ë3í3í3ï3 *cascade08ï3€4€44 *cascade08
+4†4 †4Š4*cascade08
+Š4‹4 ‹4Œ4*cascade08
+Œ4”4 ”4—4*cascade08
+—4·4 ·4¹4 *cascade08¹4½4½4¾4 *cascade08¾4¿4¿4À4 *cascade08À4Á4Á4Â4 *cascade08Â4Ê4Ê4Ì4 *cascade08
+Ì4ä4 ä4å4 *cascade08
+å4ÿ4 ÿ4€5 *cascade08€55 *cascade085‡5‡5ˆ5 *cascade08ˆ5555 *cascade08
+5É5 É5–6–6—6 *cascade08—6¢6
+¢6£6 £6§6
+§6¨6 ¨6¬6
+¬6­6 ­6»6
+»6¼6 ¼6¾6¾6¿6 *cascade08
+¿6À6 À6Î6
+Î6Ï6 Ï6Ğ6
+Ğ6Ñ6 Ñ677‚7 *cascade08‚7Ô7
+Ô7Õ7 Õ7Ù7
+Ù7Ú7 Ú7Ü7
+Ü7İ7 İ7€8
+€88 8«8
+«8¬8 ¬8´8
+´8µ8 µ8Ç8
+Ç8È8 È8Ô8
+Ô8Õ8 Õ89
+9‚9 ‚9‡9
+‡9Š9 Š9š9
+š9›9 ›99
+99 9®9
+®9¯9 ¯9Ú9
+Ú9Ü9 Ü9ß9
+ß9à9 à9‰:‰:Œ: *cascade08
+Œ:ç: ç:÷: *cascade08÷:«;*cascade08«;°; *cascade08
+°;³; ³;Ô;*cascade08
+Ô;Õ; Õ;Ö; *cascade08
+Ö;ê; ê;ñ;*cascade08
+ñ;ƒ< ƒ<„< *cascade08„<†<†<‡< *cascade08‡<ˆ< *cascade08
+ˆ<‰< ‰<«<*cascade08
+«<­< ­<¯< *cascade08
+¯<·< ·<Î< *cascade08
+Î<Ï< Ï<Ğ< *cascade08
+Ğ<Ñ< Ñ<Ù< *cascade08
+Ù<ä< ä<å< *cascade08å<ë<ë<ì< *cascade08
+ì<ó< ó<ü<*cascade08ü<ş< *cascade08ş<‚=‚=„= *cascade08
+„=‡= ‡=£= *cascade08
+£=ß= ß=…> *cascade08
+…> >  >¤>*cascade08
+¤>¥> ¥>¦>*cascade08
+¦>®> ®>±>*cascade08
+±>Ã> Ã>Ä> *cascade08Ä>Å>Å>Æ> *cascade08Æ>Ê>Ê>Ë>*cascade08Ë>Ì> *cascade08
+Ì>î> î>ğ>*cascade08
+ğ>œ@ œ@@ *cascade08@»@ *cascade08»@¼@*cascade08¼@¾@ *cascade08¾@¿@*cascade08¿@Ö@ *cascade08
+Ö@û@ û@‚A *cascade08
+‚A˜A ˜A™A*cascade08
+™AA AA*cascade08
+AÑA ÑAÒA*cascade08
+ÒA‹B ‹BŒB*cascade08
+ŒB•B •B–B*cascade08
+–BšB šBšB*cascade08
+šB¹B ¹B×B *cascade08×B×B*cascade08×BôB *cascade08
+ôB‡C ‡C‰C *cascade08‰C®C*cascade08®C·C*cascade08
+·CßC ßCàC *cascade08àCéCéCëC *cascade08ëCíCíCîC *cascade08îCñCñCòC *cascade08
+òCŒD ŒDD*cascade08
+D±D ±DµD *cascade08
+µD¼D ¼DÃD *cascade08
+ÃDçD çDéD *cascade08éDêDêDìD *cascade08ìDğDğDòD *cascade08òDóDóDôD *cascade08ôDõDõD÷D *cascade08÷DøDøDúD *cascade08úDüDüDşD *cascade08
+şDˆE ˆE‰E*cascade08
+‰EŠE ŠE‹E*cascade08‹EE *cascade08EE*cascade08
+EE E•E*cascade08•E–E *cascade08–E˜E *cascade08˜EE*cascade08EŸE *cascade08
+ŸEÄE ÄEÌE*cascade08
+ÌEÍE ÍEÎE *cascade08ÎEÑEÑEÒE *cascade08ÒEÜEÜEİE *cascade08
+İEèE èEşE*cascade08şEÿE *cascade08ÿE‚F*cascade08‚FƒF *cascade08ƒF‰F*cascade08
+‰FŠF ŠF“F*cascade08“F–F *cascade08–FËF*cascade08ËFÌF *cascade08ÌFG *cascade08GÂG *cascade08ÂGÃG *cascade08ÃGËG*cascade08
+ËGÌG ÌGĞG*cascade08ĞGÑG*cascade08ÑGôG*cascade08ôGõG*cascade08õGŠH*cascade08ŠH‹H *cascade08‹HH *cascade08HH*cascade08HH*cascade08HšH*cascade08
+šH›H ›HH*cascade08
+HH H¢H*cascade08¢H£H *cascade08£HÔH *cascade08ÔHÕH *cascade08ÕHŞH*cascade08ŞHßH *cascade08ßHêH*cascade08
+êHëH ëHœI *cascade08
+œII I¤I*cascade08
+¤I¥I ¥I¨I*cascade08¨I©I *cascade08©IÅI *cascade08ÅIÆI *cascade08ÆIÛI *cascade08
+ÛIÜI ÜIßI*cascade08ßIàI *cascade08àIãI *cascade08ãIëI*cascade08ëIğI *cascade08
+ğIôI ôIúI *cascade08úIJ*cascade08J›J *cascade08
+›JJ J¢J *cascade08¢J­J*cascade08­J®J *cascade08®J²J *cascade08²J³J*cascade08³J´J *cascade08´J·J*cascade08·J¸J *cascade08¸JºJ*cascade08ºJ»J *cascade08»JÆJ*cascade08ÆJÇJ *cascade08ÇJøJ*cascade08øJùJ*cascade08ùJÿJ*cascade08ÿJ€K *cascade08€KK*cascade08KƒK *cascade08ƒKˆK*cascade08ˆK‰K *cascade08‰KK*cascade08KK *cascade08KK*cascade08K‘K *cascade08‘K’K*cascade08’K”K *cascade08”K•K *cascade08•K–K *cascade08–KãL*cascade08ãL‹M *cascade08‹MŒM *cascade08ŒMM*cascade08M’M *cascade08’M“M*cascade08“M”M *cascade08”M™M*cascade08™MšM *cascade08šMœM *cascade08œMM*cascade08MM *cascade08MŸM*cascade08ŸM M *cascade08 M£M*cascade08£M¦M *cascade08¦M«M*cascade08«M­M*cascade08­M®M *cascade08®M´M*cascade08´M»M*cascade08»M¼M *cascade08¼MÇM*cascade08ÇMÈM *cascade08ÈMóM*cascade08óMôM *cascade08ôM÷M*cascade08÷M€N *cascade08€N‡N*cascade08‡NˆN *cascade08ˆNŠN*cascade08ŠN‹N *cascade08‹NN*cascade08N‘N *cascade08‘N“N*cascade08“N”N *cascade08”N•N*cascade08•N–N *cascade08–NN*cascade08NŸN *cascade08ŸN N*cascade08 NÊN *cascade08ÊNÏN*cascade08ÏNĞN *cascade08ĞNˆO*cascade08ˆO‹O *cascade08‹O“O*cascade08“O”O *cascade08”O•O*cascade08•O˜O *cascade08˜O¸O*cascade08¸O¹O *cascade08¹O»O*cascade08»O¼O *cascade08¼O½O*cascade08½O¾O *cascade08¾OÀO*cascade08ÀOÅO *cascade08ÅOÇO*cascade08ÇOïO *cascade08ïOõO*cascade08õOöO *cascade08öO­P*cascade08­PµP *cascade08µP¼P*cascade08¼P½P *cascade08½PÄP*cascade08ÄPÅP *cascade08ÅPÈP*cascade08ÈPÊP *cascade08ÊPĞP*cascade08ĞPÑP *cascade08ÑPÙP*cascade08ÙPÛP *cascade08ÛPáP*cascade08áPãP *cascade08ãPëP*cascade08ëPíP *cascade08íPòP*cascade08òPóP *cascade08óPôP*cascade08ôPöP *cascade08öP°Q*cascade08°Q²Q *cascade08²Q´Q*cascade08´QßQ *cascade08ßQçQ*cascade08çQèQ *cascade08èQ¤R*cascade08¤R¥R *cascade08¥R§R*cascade08§R¨R *cascade08¨R¾R*cascade08¾R¿R *cascade08¿RÃR*cascade08ÃRÄR *cascade08ÄRËR*cascade08ËRÌR *cascade08ÌRÍR*cascade08ÍRÎR *cascade08ÎRĞR*cascade08ĞRÑR *cascade08ÑRÔR*cascade08ÔRÕR *cascade08ÕR×R*cascade08×RØR *cascade08ØRÛR*cascade08ÛRÜR *cascade08ÜRßR*cascade08ßRàR *cascade08àRèR*cascade08èRëR *cascade08ëRğR*cascade08ğR”S *cascade08”S¯S*cascade08¯S±S *cascade08±SÀT*cascade08ÀTÁT *cascade08ÁTÆT*cascade08ÆTÇT *cascade08ÇTĞT*cascade08ĞTÑT *cascade08ÑTÓT*cascade08ÓTÔT *cascade08ÔTŞT*cascade08ŞTßT *cascade08ßTçT*cascade08çTêT *cascade08êTğT*cascade08ğTU *cascade08U¨U*cascade08
+¨UªU ªU¬U*cascade08
+¬U­U ­U¯U *cascade08¯UâU*cascade08âUäU *cascade08äUõU*cascade08õU•V *cascade08•V¡V*cascade08¡V¢V *cascade08¢V¦V*cascade08¦V§V *cascade08§V¨V*cascade08¨V©V *cascade08©V¯V*cascade08¯V°V *cascade08°V±V*cascade08±V´V *cascade08´VºV*cascade08ºV»V *cascade08»V¿V*cascade08¿VÀV *cascade08ÀVÂV*cascade08ÂVÃV *cascade08ÃVÆV*cascade08ÆVÇV *cascade08ÇVÈV*cascade08ÈVÊV *cascade08ÊVÍV*cascade08ÍVÎV *cascade08ÎVÙV*cascade08ÙVÚV *cascade08ÚVàV*cascade08àVáV *cascade08
+áVãV ãVöV*cascade08öVúV *cascade08
+úV–W –W¡W*cascade08¡W£W *cascade08£W¾X*cascade08¾X¿X *cascade08¿XÅX *cascade08ÅXÇX*cascade08ÇXÈX *cascade08ÈXÉX*cascade08ÉXÊX *cascade08ÊXËX*cascade08ËXÌX *cascade08ÌXÏX*cascade08ÏXĞX *cascade08ĞXÖX*cascade08ÖXØX *cascade08ØXßX *cascade08ßXôX*cascade08
+ôXõX õX÷X*cascade08
+÷XúX úXüX *cascade08üXàY *cascade08
+àYáY áYéY*cascade08
+éYëY ëYîY*cascade08
+îYïY ïYğY*cascade08
+ğYñY ñY…Z*cascade08
+…Z†Z †Z‡Z*cascade08‡ZˆZ *cascade08ˆZ˜Z*cascade08
+˜ZšZ šZ×Z*cascade08
+×ZØZ ØZãZ*cascade08
+ãZäZ äZ›[*cascade08
+›[[ [Ì[*cascade08
+Ì[Î[ Î[Ğ[*cascade08
+Ğ[Ñ[ Ñ[ó[ *cascade08ó[û[*cascade08û[ı[ *cascade08ı[€\*cascade08€\\ *cascade08\‚\*cascade08‚\…\ *cascade08…\´\*cascade08´\Ö\ *cascade08Ö\â\*cascade08â\ã\ *cascade08ã\å\*cascade08å\æ\ *cascade08æ\è\*cascade08è\é\ *cascade08é\ğ\*cascade08ğ\ñ\ *cascade08ñ\ò\*cascade08ò\ô\ *cascade08ô\ù\*cascade08ù\ú\ *cascade08ú\û\*cascade08û\ş\ *cascade08ş\„]*cascade08„]…] *cascade08…]Š]*cascade08Š]‹] *cascade08‹]¸]*cascade08¸]¹] *cascade08¹]Í]*cascade08Í]Î] *cascade08Î]Ó]*cascade08Ó]Ô] *cascade08Ô]İ]*cascade08İ]Ş] *cascade08Ş]ß]*cascade08ß]à] *cascade08à]í]*cascade08í]î] *cascade08î]ï]*cascade08ï]ğ] *cascade08ğ]ñ]*cascade08ñ]ò] *cascade08ò]ş]*cascade08ş]ÿ] *cascade08ÿ]ˆ^*cascade08ˆ^‹^ *cascade08‹^˜^*cascade08˜^¸^ *cascade08¸^»^*cascade08»^¼^ *cascade08¼^½^*cascade08½^Ã^ *cascade08Ã^Ä^*cascade08Ä^Ç^ *cascade08Ç^Ì^*cascade08Ì^Í^ *cascade08Í^Ø^*cascade08Ø^Ù^ *cascade08Ù^è^*cascade08è^é^ *cascade08é^ì^*cascade08ì^í^ *cascade08í^î^*cascade08î^ğ^ *cascade08ğ^»_*cascade08»_¼_ *cascade08¼_Â_*cascade08Â_Ë_ *cascade08Ë_Í_*cascade08Í_Ï_ *cascade08Ï_Ğ_*cascade08Ğ_Ò_ *cascade08Ò_Ô_*cascade08Ô_Õ_ *cascade08Õ_Û_*cascade08Û_Ü_ *cascade08Ü_á_*cascade08á_â_ *cascade08â_ç_*cascade08ç_è_ *cascade08è_î_*cascade08î_•` *cascade08•`¡`*cascade08¡`¢` *cascade08¢`¤`*cascade08¤`©` *cascade08©`µ`*cascade08µ`¶` *cascade08¶`·`*cascade08·`¸` *cascade08¸`Ë`*cascade08Ë`Ì` *cascade08Ì`Ï`*cascade08Ï`Ğ` *cascade08Ğ`Ò`*cascade08Ò`Ó` *cascade08Ó`ä`*cascade08ä`å` *cascade08å`–a*cascade08–a—a *cascade08—aÇa*cascade08ÇaÈa *cascade08ÈaÊa*cascade08ÊaËa *cascade08Ëaña*cascade08ñaóa *cascade08óaôa*cascade08ôaõa *cascade08õaøa*cascade08øa›b *cascade08
+›b£b £b¨b*cascade08
+¨bÉb ÉbÍb *cascade08
+Íbçb çbèb *cascade08
+èbêb êbíb
+íbîb îbòb
+òbób óböb*cascade08
+öb÷b ÷bøb*cascade08
+øbúb úb„c *cascade08„c…c*cascade08
+…c†c †cŒc*cascade08
+Œcc cc*cascade08
+c‘c ‘c’c*cascade08
+’c“c “c™c*cascade08™cšc *cascade08
+šcœc œcŸc*cascade08
+Ÿc c  c¡c*cascade08¡c¢c *cascade08¢c¤c*cascade08
+¤c©c ©c»c *cascade08»c¼c *cascade08
+¼cÄc ÄcÅc *cascade08ÅcÆc *cascade08ÆcÍcÍcÎc *cascade08ÎcÚcÚcÛc *cascade08
+ÛcÜc Üc€d *cascade08
+€d°d °dÒd*cascade08
+ÒdÕd ÕdÖd*cascade08
+Ödùd ùdşd *cascade08
+şdÿd ÿd®e*cascade08
+®e¹e ¹eºe *cascade08ºe»e *cascade08»e¼e *cascade08
+¼eÆe ÆeÛe*cascade08
+ÛeÜe Üeİe*cascade08
+İeŞe Şeáe*cascade08
+áeâe âeäe *cascade08äeåe*cascade08
+åeæe æeçe*cascade08çeèe *cascade08
+èeée éeêe*cascade08
+êeëe ëeñe*cascade08ñeúe*cascade08
+úef f…f*cascade08
+…f±f ±f³f *cascade08³f¿f¿fÀf *cascade08ÀfÁfÁfÂf *cascade08
+ÂfÅf ÅfÈf
+ÈfÉf ÉfÍf
+ÍfÎf ÎfÔf
+ÔfÕf 
+ÕfÙf 
+ÙfÚf Úfİf
+İfŞf Şfßf*cascade08ßfàf *cascade08àfáf*cascade08
+áfæf æfçf *cascade08
+çfñf ñfòf*cascade08òfƒg
+ƒg„g „g…g *cascade08…g†g*cascade08
+†gg g¡g*cascade08
+¡g¬g 
+¬g³g ³g´g*cascade08´gµg*cascade08
+µgÔg Ôg×g*cascade08
+×gÿg ÿgƒh*cascade08
+ƒh„h „hÕi *cascade08Õiİi*cascade08İi·j *cascade08
+·jºj ºj÷j *cascade08÷j¬k*cascade08¬kğk *cascade08
+ğkùk ùkúk *cascade08
+úkûk 
+ûkük ükık*cascade08
+ıkl lˆl*cascade08
+ˆlŠl Šl°l*cascade08
+°l¹l ¹lºl *cascade08
+ºlÁl ÁlÂl*cascade08
+ÂlÄl ÄlÇl*cascade08
+ÇlÈl ÈlÉl *cascade08ÉlÊl*cascade08ÊlËl *cascade08
+ËlÕl Õl¸m *cascade08¸m¿m*cascade08¿mÀm *cascade08ÀmÂm*cascade08ÂmÃm *cascade08ÃmÄm*cascade08ÄmÅm *cascade08ÅmÍm*cascade08ÍmÎm *cascade08ÎmÓm*cascade08ÓmÕm *cascade08ÕmÛm*cascade08Ûm¹n *cascade08¹nân *cascade08ânçn*cascade08çnïn *cascade08ïnön*cascade08ön÷n *cascade08÷n€o*cascade08€oo *cascade08o„o*cascade08„o…o *cascade08…o†o*cascade08†o‰o *cascade08‰o‹o*cascade08‹oŒo *cascade08Œoo*cascade08oo *cascade08o o*cascade08 o¯o*cascade08¯o°o *cascade08°oÏo*cascade08ÏoĞo *cascade08ĞoÑo*cascade08ÑoÒo *cascade08Òo„p *cascade08„p½p *cascade08½pÂp*cascade08ÂpÆp*cascade08ÆpÇp *cascade08ÇpËp*cascade08ËpÒp *cascade08ÒpÓp*cascade08Óp×p *cascade08×pâp*cascade08âpòp *cascade08òpóp *cascade08ópøp*cascade08øpùp *cascade08ùpûp*cascade08ûp‚q *cascade08‚q„q*cascade08„q’q *cascade08’qÜq*cascade08Üqİq *cascade08İqãq*cascade08ãqäq *cascade08äqçq*cascade08çqèq *cascade08èq÷q*cascade08÷q¢r *cascade08¢rªr*cascade08ªr«r *cascade08«r·r*cascade08·r¸r *cascade08¸r¼r*cascade08¼r½r *cascade08½r¾r*cascade08¾r¿r *cascade08¿rÉr*cascade08ÉrÊr *cascade08Êrœs*cascade08œss *cascade08s¡s*cascade08¡s£s *cascade08£sæs*cascade08æsçs *cascade08çsŠt*cascade08Št‹t *cascade08‹t¾u*cascade08¾u¿u *cascade08¿uÒu*cascade08ÒuÓu *cascade08ÓuÒw*cascade08ÒwÓw *cascade08Ówx*cascade08x‘x *cascade08‘xºx*cascade08ºx»x *cascade08»xˆy*cascade08ˆy‰y *cascade08‰yÅy*cascade08ÅyÆy *cascade08ÆyÏy*cascade08ÏyĞy *cascade08ĞyÔy*cascade08ÔyÕy *cascade08Õy¤{*cascade08¤{¥{ *cascade08¥{²{ *cascade08²{Ú{*cascade08Ú{ÿ{ *cascade08ÿ{‚|*cascade08‚|ƒ| *cascade08ƒ|„|*cascade08„|…| *cascade08…|º|*cascade08º|¿| *cascade08¿|Á| *cascade08Á|Â| *cascade08Â|Ã|*cascade08Ã|ı| *cascade08ı|‹} *cascade08‹}Œ}*cascade08Œ}} *cascade08}›}*cascade08›}¦} *cascade08¦}§}*cascade08§}À} *cascade08À}Á}*cascade08Á}ê} *cascade08ê}ø} *cascade08ø}ù}*cascade08ù}ú} *cascade08ú}ÿ}*cascade08ÿ}€~ *cascade08€~~*cascade08~³~ *cascade08³~Ù~*cascade08Ù~ç~ *cascade08ç~ë~*cascade08ë~‹ *cascade08‹–*cascade08–¥ *cascade08¥²*cascade08²µ *cascade08µ·*cascade08·¸ *cascade08¸º*cascade08ºÔ *cascade08ÔÚ *cascade08Úà *cascade08àá *cascade08áâ *cascade08âã *cascade08ãä *cascade08äå*cascade08åæ *cascade08æç *cascade08çé *cascade08éë *cascade08ëî *cascade08îï *cascade08ïğ *cascade08ğñ *cascade08ñò *cascade08òõ *cascade08õ÷ *cascade08÷€ *cascade08€€ *cascade08€§€ *cascade08§€¨€ ¨€©€*cascade08©€¯€ ¯€µ€ *cascade08µ€¹€*cascade08¹€¼€ ¼€Î€ *cascade08Î€Ñ€ *cascade08Ñ€Ù€ *cascade08
+Ù€Û€Û€İ€ *cascade08İ€Ş€ *cascade08
+Ş€à€à€â€ *cascade08â€ã€*cascade08ã€ä€ *cascade08ä€å€ *cascade08
+å€æ€æ€è€ *cascade08è€ê€ *cascade08
+ê€ë€ë€ì€ *cascade08ì€í€*cascade08í€ñ€ *cascade08ñ€‰ *cascade08‰‹ *cascade08‹*cascade08› *cascade08›œ*cascade08œ *cascade08¡*cascade08¡£ *cascade08£¤*cascade08¤± *cascade08±´*cascade08´Ë *cascade08ËÌ *cascade08ÌÍ*cascade08ÍÎ *cascade08
+ÎÏÏĞ *cascade08
+ĞÑÑû*cascade08ûı *cascade08ı‚*cascade08‚œ‚ *cascade08œ‚¤‚ *cascade08¤‚÷‚ *cascade08÷‚ƒ ƒƒƒ*cascade08ƒƒ‰ƒ ‰ƒŠƒ*cascade08Šƒ¢ƒ ¢ƒ£ƒ*cascade08£ƒ¤ƒ ¤ƒ¦ƒ*cascade08¦ƒ¨ƒ ¨ƒ©ƒ*cascade08©ƒ¯ƒ ¯ƒ´ƒ*cascade08´ƒµƒ µƒ¶ƒ*cascade08¶ƒÊƒ ÊƒËƒ*cascade08ËƒÌƒ ÌƒÎƒ*cascade08ÎƒÖƒ Öƒåƒ*cascade08åƒ„ *cascade08„…„ *cascade08…„‰„*cascade08‰„•„ *cascade08•„Ÿ„*cascade08Ÿ„ „ *cascade08 „¡„ *cascade08¡„¢„*cascade08
+¢„Ã„Ã„Ç„ *cascade08Ç„Ì„ *cascade08Ì„Ï„ Ï„ç„ *cascade08ç„ë„*cascade08ë„ì„ *cascade08ì„ò„ ò„ô„*cascade08ô„˜… ˜…š…*cascade08š…›… ›…œ… *cascade08œ…… …¢…*cascade08¢…Ê… Ê…×… *cascade08×…Ø…*cascade08Ø…ì… *cascade08ì…í…*cascade08í…î… *cascade08î…ğ…*cascade08ğ…ñ… *cascade08ñ…ò… *cascade08ò…ó…*cascade08ó…ô… *cascade08ô…ÿ… *cascade08ÿ…‰† *cascade08‰†Œ†*cascade08Œ†† *cascade08††*cascade08†“† *cascade08“†”†*cascade08”†Ÿ† Ÿ†¡† *cascade08¡†£† *cascade08£†¦† ¦†Ë† *cascade08Ë†Ï†*cascade08Ï†Ğ†*cascade08Ğ†Ñ† *cascade08Ñ†Õ†*cascade08Õ†×† *cascade08×†Ø†*cascade08Ø†Ù† *cascade08Ù†Ú†*cascade08Ú†Û†*cascade08Û†Ü† *cascade08Ü†İ†*cascade08İ†ß† *cascade08ß†à† *cascade08à†å† å†é†*cascade08é†î† *cascade08î†ò†*cascade08ò†‡ ‡ ‡ *cascade08 ‡­‡ ­‡®‡*cascade08®‡»‡ »‡Á‡ *cascade08
+Á‡Ä‡Ä‡Æ‡ *cascade08
+Æ‡Ï‡Ï‡Ğ‡ *cascade08Ğ‡Ö‡ Ö‡×‡ *cascade08×‡Ø‡*cascade08Ø‡İ‡*cascade08İ‡ß‡ *cascade08ß‡á‡*cascade08á‡â‡ *cascade08â‡ş‡ *cascade08ş‡ˆ ˆƒˆ*cascade08ƒˆ…ˆ *cascade08…ˆˆˆ*cascade08ˆˆ‹ˆ *cascade08‹ˆ”ˆ ”ˆ«ˆ *cascade08«ˆ¯ˆ*cascade08¯ˆ°ˆ *cascade08°ˆµˆ *cascade08µˆ¹ˆ*cascade08¹ˆ¼ˆ *cascade08¼ˆÜˆ *cascade08ÜˆŞˆ Şˆàˆ *cascade08àˆäˆ äˆçˆ *cascade08çˆèˆ*cascade08èˆìˆ *cascade08ìˆíˆ*cascade08íˆóˆ *cascade08óˆôˆ ôˆöˆ*cascade08öˆ÷ˆ ÷ˆüˆ *cascade08
+üˆ€‰€‰‰ *cascade08‰‚‰ ‚‰ƒ‰*cascade08ƒ‰„‰ *cascade08„‰…‰ *cascade08
+…‰‰‰‰ *cascade08‰‘‰ *cascade08
+‘‰’‰’‰“‰ *cascade08“‰—‰ —‰œ‰*cascade08œ‰‰ ‰ ‰*cascade08 ‰¡‰ ¡‰¢‰ *cascade08¢‰§‰*cascade08§‰¨‰ ¨‰©‰*cascade08©‰­‰ *cascade08­‰²‰*cascade08²‰³‰ *cascade08³‰½‰ *cascade08½‰¾‰*cascade08¾‰Ş‰ Ş‰ß‰*cascade08ß‰à‰ *cascade08à‰ã‰ *cascade08ã‰é‰*cascade08é‰‡Š *cascade08‡Š‹Š*cascade08‹ŠŒŠ *cascade08ŒŠŠ*cascade08Š•Š *cascade08•Š—Š*cascade08—Š˜Š ˜Š™Š *cascade08™ŠšŠ*cascade08šŠ›Š *cascade08›ŠŠ*cascade08ŠŸŠ *cascade08ŸŠ Š*cascade08 Š¡Š *cascade08¡Š¦Š*cascade08¦Š¨Š *cascade08¨ŠªŠ *cascade08ªŠ«Š*cascade08«Š®Š ®Š¯Š*cascade08¯ŠËŠ ËŠÏŠ *cascade08ÏŠÒŠ*cascade08ÒŠÚŠ ÚŠŞŠ*cascade08ŞŠ‚‹ ‚‹†‹*cascade08†‹ø‹ ø‹ü‹*cascade08ü‹Œ Œ´Œ *cascade08´Œ¸Œ *cascade08¸Œ¼Œ*cascade08¼Œ¿Œ *cascade08¿ŒÀŒ ÀŒÂŒ *cascade08ÂŒÄŒ*cascade08ÄŒÆŒ *cascade08ÆŒÊŒ*cascade08ÊŒŞŒ *cascade08ŞŒâŒ*cascade08âŒæŒ*cascade08æŒçŒ *cascade08çŒêŒ*cascade08êŒëŒ *cascade08ëŒíŒ*cascade08íŒîŒ *cascade08îŒğŒ*cascade08ğŒòŒ *cascade08òŒôŒ*cascade08ôŒõŒ *cascade08õŒ÷Œ*cascade08÷ŒùŒ *cascade08ùŒıŒ*cascade08ıŒşŒ *cascade08şŒÿŒ*cascade08ÿŒ€ *cascade08€…*cascade08…ˆ *cascade08ˆ‹ *cascade08‹Ÿ Ÿ£ *cascade08£§*cascade08§« *cascade08«Ì *cascade08ÌÎ*cascade08ÎĞ *cascade08ĞÔ*cascade08ÔØ *cascade08ØÚ Úİ*cascade08İá *cascade08áù ùú*cascade08ú *cascade08‚ *cascade08‚ƒ *cascade08ƒ„ *cascade08„‰*cascade08‰‹ *cascade08‹*cascade08 *cascade08–*cascade08–˜ *cascade08˜›*cascade08›œ *cascade08œŸ*cascade08Ÿ  *cascade08 ¡*cascade08¡¢ *cascade08¢¤*cascade08¤¥ *cascade08¥ª*cascade08ª« *cascade08«´*cascade08´µ *cascade08µ½*cascade08½¾ *cascade08¾Â*cascade08ÂÃ *cascade08ÃË*cascade08ËÍ *cascade08ÍĞ*cascade08ĞÑ *cascade08ÑÒ*cascade08ÒÔ *cascade08ÔŞ Şà*cascade08àæ æç*cascade08çÿ ÿ *cascade08‡*cascade08‡ˆ *cascade08ˆŒ Œ *cascade08*cascade08 *cascade08’*cascade08’“ “”*cascade08”• *cascade08•§ §«*cascade08«¬ *cascade08¬´ ´Ã*cascade08ÃÅ *cascade08ÅÇ *cascade08ÇÈ Èá *cascade08áã *cascade08ãç*cascade08çë *cascade08ë€ *cascade08
+€¡¡£ *cascade08£¥ *cascade08¥ª *cascade08ªÅ *cascade08ÅÉ*cascade08ÉÊ *cascade08Êô ôø*cascade08øù ùú *cascade08úü üÿ*cascade08ÿ¦‘ ¦‘§‘ *cascade08§‘¨‘*cascade08¨‘©‘ *cascade08
+©‘ª‘ª‘«‘ *cascade08«‘¯‘ ¯‘³‘*cascade08³‘´‘ ´‘µ‘*cascade08µ‘¶‘*cascade08¶‘¹‘*cascade08¹‘º‘ º‘»‘*cascade08»‘½‘ ½‘¾‘*cascade08¾‘¿‘ ¿‘À‘ À‘Ä‘*cascade08Ä‘Ê‘ *cascade08Ê‘Í‘*cascade08Í‘Î‘ Î‘Ï‘*cascade08Ï‘Ğ‘ *cascade08
+Ğ‘Ñ‘Ñ‘Ó‘ *cascade08Ó‘Ô‘ Ô‘×‘*cascade08×‘Ø‘ Ø‘Û‘*cascade08Û‘İ‘ İ‘Ş‘*cascade08Ş‘à‘ à‘ã‘*cascade08ã‘ä‘ ä‘æ‘*cascade08æ‘ç‘ ç‘ê‘*cascade08ê‘ë‘ ë‘ì‘*cascade08ì‘ñ‘ ñ‘ò‘*cascade08ò‘ı‘ ı‘ÿ‘ *cascade08ÿ‘’ *cascade08’ƒ’ ƒ’©’ *cascade08©’­’*cascade08­’³’*cascade08³’µ’ *cascade08µ’¼’*cascade08¼’½’ *cascade08½’¾’ *cascade08¾’¿’ *cascade08¿’Ã’*cascade08Ã’Ä’ *cascade08Ä’Æ’ *cascade08Æ’Ç’*cascade08Ç’Ê’ *cascade08Ê’Í’*cascade08Í’Ñ’ *cascade08Ñ’Õ’ Õ’í’ *cascade08í’ñ’ ñ’ò’*cascade08ò’ó’ *cascade08ó’õ’*cascade08õ’÷’ ÷’ø’ *cascade08
+ø’ü’ü’ı’ *cascade08ı’ş’ ş’“*cascade08“‚“ *cascade08‚“ƒ“*cascade08ƒ“„“ „“Œ“ *cascade08
+Œ“““‘“ *cascade08‘“’“*cascade08’“““ *cascade08
+““”“”“•“ *cascade08
+•“™“™“š“ *cascade08š“Ÿ“ Ÿ“¥“ *cascade08
+¥“¨“¨“©“ *cascade08©“³“ ³“´“ 
+´“¹“¹“»“ *cascade08»“¼“*cascade08¼“Á“*cascade08Á“Î“ *cascade08Î“×“ *cascade08×“ß“*cascade08
+ß“ã“ã“ç“*cascade08ç“ï“ *cascade08ï“ñ“*cascade08
+ñ“õ“õ“ù“*cascade08ù“Š” *cascade08Š”‘” *cascade08‘”“”*cascade08“””” *cascade08””—”*cascade08—”™” ™””*cascade08”Á” Á”È” *cascade08È”É”*cascade08É”Ê” Ê”Ë” *cascade08Ë”Ì”*cascade08Ì”Ğ” *cascade08Ğ”Ñ”*cascade08Ñ”Ò” *cascade08Ò”Ó”*cascade08Ó”Ô” Ô”Õ”*cascade08Õ”Ö” Ö”Ù”*cascade08Ù”Ú” *cascade08Ú”İ”*cascade08İ”Ş” Ş”à” *cascade08
+à”ä”ä”å” *cascade08
+å”ê”ê”ë” *cascade08
+ë”í”í”î” *cascade08
+î”ñ”ñ”ò” *cascade08
+ò”ó”ó”ô” *cascade08
+ô”ö”ö”÷” *cascade08÷”ú” ú”ü”*cascade08ü”ı” ı”ƒ•*cascade08ƒ•„• „•†•*cascade08†•‡• ‡•ˆ•*cascade08ˆ•‰• *cascade08‰•Š•*cascade08Š•‹• *cascade08‹••*cascade08•‘• *cascade08‘•“•*cascade08“•”• *cascade08”•••*cascade08••–• *cascade08–•—•*cascade08—•˜• *cascade08˜•š•*cascade08š•›• *cascade08›••*cascade08• •  •¡• *cascade08¡•¢•*cascade08¢•Ä• Ä•Æ• *cascade08Æ•È• *cascade08È•ç• *cascade08ç•ì• *cascade08ì•ğ•*cascade08ğ•ò•*cascade08ò•ó• *cascade08ó•õ•*cascade08õ•ö• *cascade08ö•ş•*cascade08ş•ÿ• ÿ•†– *cascade08†–‹–*cascade08‹–– *cascade08––*cascade08–‘– *cascade08‘–˜–*cascade08˜–š– *cascade08š–œ– *cascade08œ––*cascade08–– *cascade08– –  –¨–*cascade08¨–À– À–Ä–*cascade08Ä–Ì– Ì–Î–*cascade08Î–ê– ê–ì–*cascade08ì–ô– ô–ø–*cascade08ø–†˜ †˜Š˜*cascade08Š˜’˜ *cascade08’˜–˜*cascade08–˜¨˜ *cascade08¨˜®˜ *cascade08®˜¯˜ *cascade08¯˜°˜*cascade08
+°˜³˜³˜¸˜*cascade08¸˜¹˜*cascade08¹˜º˜ *cascade08º˜»˜ *cascade08»˜¼˜ *cascade08¼˜¾˜ *cascade08¾˜Ñ˜ *cascade08Ñ˜Ô˜*cascade08Ô˜Ø˜*cascade08Ø˜Ù˜ *cascade08Ù˜Ü˜*cascade08Ü˜İ˜ *cascade08İ˜ß˜*cascade08ß˜à˜ *cascade08à˜ì˜*cascade08ì˜í˜ *cascade08í˜õ˜*cascade08õ˜û˜ *cascade08û˜„™ *cascade08„™™ *cascade08™“™ *cascade08“™—™*cascade08—™™*cascade08™¡™*cascade08¡™½™ *cascade08
+½™Â™Â™Ä™ *cascade08Ä™È™ *cascade08È™É™ É™Ï™*cascade08Ï™Ñ™ Ñ™Ü™*cascade08Ü™İ™ İ™‰š*cascade08‰šŠš Šš“š*cascade08“š”š ”š—š*cascade08—š¡š ¡š£š*cascade08£š©š ©šªš*cascade08ªšÂš ÂšÃš*cascade08ÃšÄš ÄšÆš*cascade08ÆšÈš ÈšÉš*cascade08ÉšÏš ÏšĞš*cascade08ĞšÑš ÑšÓš*cascade08ÓšÕš ÕšÖš*cascade08Öšêš êšëš*cascade08ëšìš ìšíš*cascade08íšîš îšïš*cascade08ïšöš öšøš *cascade08øšúš *cascade08úšıš *cascade08ıš–› *cascade08–›š›*cascade08š›³› *cascade08
+³›Ô›Ô›Ø› *cascade08Ø›Ù›*cascade08Ù›Ş› *cascade08Ş›ò› *cascade08ò›ù› *cascade08ù›ü›*cascade08ü›ı› *cascade08ı›§œ §œ«œ*cascade08«œ¬œ ¬œ­œ*cascade08­œ¯œ ¯œ³œ*cascade08³œÚœ ÚœÛœ *cascade08Ûœâœ *cascade08âœèœ *cascade08èœéœ*cascade08éœíœ *cascade08íœîœ *cascade08îœôœ*cascade08ôœõœ *cascade08õœüœ*cascade08üœıœ *cascade08ıœşœ*cascade08şœÿœ *cascade08ÿœ€*cascade08€ *cascade08‚*cascade08‚ƒ *cascade08ƒ„*cascade08„‡ *cascade08‡ˆ *cascade08ˆŠ*cascade08ŠŒ *cascade08Œ’*cascade08’” *cascade08”œ*cascade08œ *cascade08Ÿ*cascade08Ÿ  *cascade08 ¤ *cascade08¤¥*cascade08¥° °± *cascade08±² *cascade08²´ *cascade08´¸*cascade08¸Ü *cascade08Üà *cascade08àí *cascade08íò *cascade08òõ *cascade08õø *cascade08ø‚ ‚” *cascade08”˜*cascade08
+˜œœ *cascade08 ¡ *cascade08¡£*cascade08£¤ ¤¬ *cascade08¬°*cascade08°± *cascade08±²*cascade08²´ *cascade08´À ÀÁ*cascade08Áì ìî*cascade08î”Ÿ ”Ÿ˜Ÿ*cascade08˜ŸŸŸ ŸŸ£Ÿ*cascade08£ŸËŸ ËŸÎŸ*cascade08ÎŸîŸ îŸïŸ*cascade08ïŸõŸ õŸùŸ*cascade08ùŸ     ¡  ¡ §  § ¨ *cascade08¨ ¬  ¬ ­ *cascade08­ ·  · ¸  ¸ Â  Â Ã *cascade08Ã Æ  Æ Ç  
+Ç Ü Ü Ş  
+Ş à à á  á ı  ı ş *cascade08ş ¡ ¡Ÿ¡*cascade08Ÿ¡Ç¡ Ç¡Ë¡*cascade08Ë¡“¢ “¢—¢*cascade08—¢Ÿ¢ Ÿ¢¡¢*cascade08¡¢½¢ ½¢¿¢*cascade08¿¢Ç¢ Ç¢Ë¢*cascade08Ë¢í¢ í¢ï¢*cascade08ï¢‡£ ‡£‰£*cascade08‰££ ££ *cascade08££ £—£ *cascade08—£˜£*cascade08˜£™£ *cascade08™£š£*cascade08š£›£ ›££*cascade08££ *cascade08£¡£*cascade08¡£¦£ *cascade08¦£¨£*cascade08¨£ª£ *cascade08ª£«£*cascade08«£±£ ±£µ£*cascade08µ£ç£ ç£è£*cascade08è£‰¤ ‰¤Š¤*cascade08Š¤Œ¤ *cascade08Œ¤¤ ¤¤*cascade08¤¬¤ ¬¤®¤*cascade08®¤½¤ ½¤¾¤*cascade08¾¤Â¤ Â¤Æ¤*cascade08Æ¤ç¤ ç¤é¤*cascade08é¤ö¤ ö¤ú¤*cascade08ú¤û¤ û¤ü¤*cascade08ü¤¥ ¥“¥*cascade08“¥”¥ ”¥–¥*cascade08–¥²¥ ²¥¹¥*cascade08¹¥º¥ *cascade08º¥à¥ à¥ä¥*cascade08ä¥å¥ å¥ç¥ *cascade08ç¥è¥ *cascade08è¥é¥*cascade08é¥ê¥ *cascade08ê¥ë¥*cascade08ë¥ì¥ ì¥ñ¥*cascade08ñ¥ó¥ *cascade08ó¥õ¥*cascade08õ¥ö¥ ö¥¦ *cascade08¦”¦ *cascade08”¦˜¦*cascade08˜¦ ¦*cascade08 ¦¡¦*cascade08¡¦­¦ *cascade08­¦³¦*cascade08³¦½¦ ½¦À¦*cascade08À¦Ä¦ *cascade08Ä¦Æ¦ Æ¦Ê¦*cascade08Ê¦ñ¦ ñ¦ö¦*cascade08ö¦÷¦ ÷¦„§*cascade08„§…§ …§Š§ *cascade08Š§‹§ ‹§Œ§*cascade08Œ§§ §§*cascade08§§ §”§*cascade08”§•§ •§¡§*cascade08¡§£§ £§¨§*cascade08¨§¯§ ¯§°§*cascade08°§Á§ Á§Í§ *cascade08Í§Î§ Î§å§ *cascade08å§é§*cascade08é§ş§ *cascade08ş§ÿ§*cascade08ÿ§—¨ *cascade08—¨›¨*cascade08›¨Í¨ *cascade08Í¨Î¨ Î¨Ï¨*cascade08Ï¨Ğ¨ Ğ¨Ö¨ *cascade08Ö¨Ø¨*cascade08Ø¨å¨ *cascade08å¨æ¨*cascade08æ¨ò¨ *cascade08ò¨ú¨ ú¨û¨*cascade08û¨‰© ‰©Š©*cascade08Š©‹© *cascade08‹©´© ´©¸© *cascade08¸©¼©*cascade08¼©½© *cascade08½©Â© *cascade08Â©Æ©*cascade08Æ©õ© *cascade08õ©ö© *cascade08ö©û©*cascade08û©ı© *cascade08ı©€ª *cascade08€ªª*cascade08ª‚ª *cascade08‚ªƒª *cascade08ƒª„ª*cascade08„ª…ª *cascade08…ª†ª*cascade08†ªª *cascade08ªª ª”ª*cascade08”ª•ª •ªª*cascade08ª ª  ª­ª*cascade08­ªÏª *cascade08
+ÏªÓªÓªÛª *cascade08Ûªßª*cascade08ßªãª *cascade08ãªäª *cascade08äªêª êªìª*cascade08ìªíª íªîª*cascade08îªïª ïªñª*cascade08ñªòª òªóª*cascade08óªøª *cascade08øªùª ùªúª*cascade08úªûª ûªˆ«*cascade08ˆ«‰« ‰«Š«*cascade08Š«‹« ‹««*cascade08«’« ’«•«*cascade08•«–« –«—«*cascade08—«˜« ˜«¤« *cascade08¤«§«*cascade08§«®« *cascade08®«¯« ¯«Ó« *cascade08Ó«Ô«*cascade08Ô«á« *cascade08á«â« â«ã«*cascade08ã«ä« ä«æ«*cascade08æ«ç« ç«è«*cascade08è«ì« *cascade08ì«í« í«ñ«*cascade08ñ«ò« ò«ó« ó«ô«*cascade08ô«õ« õ«ù«*cascade08ù«ú« *cascade08ú«ş«*cascade08ş«€¬ *cascade08€¬†¬*cascade08†¬‡¬ *cascade08‡¬¬*cascade08¬‘¬ ‘¬Â¬*cascade08Â¬Æ¬*cascade08Æ¬È¬ *cascade08È¬Ê¬ Ê¬Í¬ *cascade08Í¬Ğ¬*cascade08Ğ¬ô¬ *cascade08ô¬õ¬*cascade08õ¬ú¬ *cascade08ú¬û¬ û¬ÿ¬ *cascade08ÿ¬ƒ­*cascade08ƒ­¨­ *cascade08¨­©­ ©­®­*cascade08®­¯­ ¯­·­*cascade08·­¸­ ¸­»­*cascade08»­¼­ ¼­½­ *cascade08½­Á­*cascade08Á­Â­ Â­Ã­*cascade08Ã­Ä­ Ä­Å­*cascade08Å­Ç­ Ç­Ë­*cascade08Ë­Ì­ Ì­Ô­*cascade08Ô­Õ­ Õ­Ù­*cascade08Ù­İ­ İ­á­*cascade08á­â­ â­ã­*cascade08ã­å­ *cascade08å­è­*cascade08è­é­ é­í­ *cascade08í­ğ­*cascade08ğ­® *cascade08®‘®*cascade08‘®˜® *cascade08˜®›® *cascade08›®Ÿ®*cascade08Ÿ®­® *cascade08­®µ® µ®¹® *cascade08¹®Ç® Ç®Ë® *cascade08Ë®Î® Î®Ù®*cascade08Ù®ß® ß®ß®*cascade08ß®ã®*cascade08ã®ä® ä®ç®*cascade08ç®é® *cascade08é®í®*cascade08í®Œ¯ *cascade08Œ¯”¯ ”¯µ¯ *cascade08µ¯¹¯ *cascade08¹¯º¯*cascade08º¯¾¯ *cascade08¾¯¿¯*cascade08¿¯Ø¯ *cascade08Ø¯Ù¯ *cascade08Ù¯ß¯ ß¯à¯*cascade08à¯ã¯ ã¯ç¯ *cascade08ç¯é¯*cascade08é¯ø¯ *cascade08ø¯ù¯ ù¯‰° *cascade08‰°‹°*cascade08‹°˜° *cascade08˜°™°*cascade08™°š° š°° *cascade08
+° ° °¢° *cascade08
+¢°¥°¥°¦° *cascade08¦°§° §°ª°*cascade08ª°«° *cascade08«°¬°*cascade08¬°µ°*cascade08µ°¶°*cascade08¶°º°*cascade08º°¼° *cascade08¼°½° *cascade08½°È°*cascade08È°É°*cascade08É°Ê° *cascade08Ê°Ë°*cascade08Ë°Ñ° *cascade08Ñ°Ò°*cascade08Ò°Ó° Ó°Ô°*cascade08Ô°Õ° *cascade08Õ°×°*cascade08×°Ø° *cascade08Ø°Ù°*cascade08Ù°Û° *cascade08Û°ß°*cascade08ß°ä°*cascade08ä°ÿ° *cascade08ÿ°†±*cascade08†±–± –±± *cascade08±¡± *cascade08¡±¥± ¥±§± *cascade08§±¨± ¨±©±*cascade08©±ª± ª±«± *cascade08
+«±¶±¶±¸± *cascade08¸±Ã±*cascade08Ã±Æ± Æ±Ç± *cascade08Ç±æ± æ±ê±*cascade08ê±ï± ï±ò± *cascade08ò±ö±*cascade08ö±ş±*cascade08ş±–² *cascade08–²—²*cascade08—²£² *cascade08£²«²*cascade08«²®²*cascade08®²´² *cascade08´²Î²*cascade08Î²Ğ² *cascade08Ğ²Ô² *cascade08Ô²Ü² *cascade08Ü²à² *cascade08à²ä²*cascade08ä²é² *cascade08é²û²*cascade08û²ş² *cascade08ş²ÿ²*cascade08ÿ²„³*cascade08„³‹³ *cascade08‹³³*cascade08
+³–³–³š³*cascade08š³ª³*cascade08ª³º³*cascade08º³½³ *cascade08½³¾³ *cascade08
+¾³¿³¿³Á³ *cascade08Á³Â³*cascade08
+Â³Ç³Ç³Ê³ *cascade08
+Ê³Ì³Ì³Ğ³*cascade08Ğ³Ô³ *cascade08Ô³—´ —´›´ *cascade08›´Ÿ´*cascade08Ÿ´¤´ *cascade08
+¤´µ´µ´¼´ *cascade08
+¼´¾´¾´Á´ *cascade08
+Á´Æ´Æ´Ç´ *cascade08
+Ç´Í´Í´Î´ *cascade08
+Î´Ğ´Ğ´Ñ´ *cascade08
+Ñ´Ò´Ò´Õ´ *cascade08
+Õ´Ö´Ö´Ø´ *cascade08
+Ø´Û´Û´Ü´ *cascade08
+Ü´İ´İ´Ş´ *cascade08
+Ş´ß´ß´à´ *cascade08à´ğ´ ğ´ò´ *cascade08ò´ú´ ú´û´ *cascade08û´Œµ Œµµ *cascade08
+µµµ“µ *cascade08“µ–µ*cascade08–µ¤µ *cascade08¤µ»µ »µ¾µ *cascade08¾µ¿µ *cascade08¿µÏµ *cascade08
+ÏµÒµÒµÓµ *cascade08ÓµÕµ Õµ×µ*cascade08×µåµ åµæµ*cascade08æµçµ çµèµ*cascade08èµéµ éµêµ*cascade08êµúµ úµÿµ*cascade08ÿµ€¶ €¶¶ *cascade08¶ƒ¶ *cascade08ƒ¶†¶ †¶—¶ *cascade08
+—¶˜¶˜¶™¶ *cascade08™¶š¶*cascade08
+š¶›¶›¶œ¶*cascade08œ¶§¶ §¶¨¶ *cascade08
+¨¶µ¶µ¶¶¶ *cascade08
+¶¶·¶·¶¸¶ *cascade08¸¶¹¶ ¹¶º¶*cascade08º¶»¶ »¶Ç¶ *cascade08Ç¶Ô¶ *cascade08Ô¶Ö¶*cascade08
+Ö¶Ú¶Ú¶Ş¶ *cascade08Ş¶ß¶ *cascade08ß¶â¶ *cascade08
+â¶ã¶ã¶ä¶ *cascade08ä¶ô¶ ô¶ø¶*cascade08ø¶ü¶ ü¶ş¶*cascade08ş¶ÿ¶ ÿ¶·*cascade08·‚· ‚·…·*cascade08…·†· *cascade08
+†·ˆ·ˆ·Š· *cascade08
+Š·Œ·Œ·· *cascade08
+···‘· *cascade08
+‘·’·’·“· *cascade08“·—· —·˜· *cascade08
+˜···· *cascade08
+·¢·¢·¤· *cascade08¤·¨· ¨·©· *cascade08©·¬· ¬·­·*cascade08­·±· ±·²· *cascade08²·µ· µ·¸·*cascade08¸·º· º·¾·*cascade08¾·¿· *cascade08¿·Å· Å·Æ·*cascade08Æ·Ç· Ç·Ş·*cascade08Ş·ß· *cascade08ß·ç· ç·è·*cascade08è·é· é·†¸ *cascade08†¸¸ ¸¸ *cascade08
+¸—¸—¸š¸ *cascade08
+š¸¢¸¢¸¶¸ *cascade08¶¸Á¸ *cascade08Á¸Å¸ Å¸Ç¸*cascade08Ç¸Ñ¸ Ñ¸Ù¸*cascade08Ù¸ê¸ *cascade08ê¸ñ¸*cascade08ñ¸û¸ û¸ÿ¸ *cascade08ÿ¸•¹ •¹™¹*cascade08™¹š¹ *cascade08š¹ ¹*cascade08 ¹¡¹ *cascade08¡¹©¹*cascade08©¹«¹ *cascade08«¹Ë¹ Ë¹·º *cascade08·º¸º ¸º»º*cascade08»ºÙº ÙºÚº*cascade08ÚºÜº Üºİº*cascade08İºãº ãºåº *cascade08åºƒ» ƒ»„» *cascade08„»ˆ»*cascade08ˆ»‰» ‰»Š» *cascade08
+Š»‹»‹»» *cascade08»»*cascade08
+»“»“»•» *cascade08•»—»*cascade08—»˜» ˜» »*cascade08 »¡» ¡»¢» *cascade08¢»½»*cascade08½»¿» *cascade08¿»Æ» Æ»Ş» *cascade08Ş»ß» ß»ÿ» *cascade08ÿ»¼ ¼‘¼ *cascade08‘¼—¼ —¼˜¼*cascade08˜¼š¼ š¼›¼ *cascade08
+›¼Ÿ¼Ÿ¼ ¼*cascade08 ¼¡¼ *cascade08¡¼¢¼*cascade08¢¼¤¼ ¤¼¥¼ *cascade08¥¼®¼ ®¼¯¼*cascade08¯¼²¼ ²¼¼¼*cascade08¼¼Á¼ Á¼Â¼ *cascade08Â¼Å¼ Å¼Æ¼*cascade08Æ¼Ç¼ Ç¼×¼*cascade08×¼Ø¼ Ø¼Ü¼*cascade08Ü¼Ş¼ Ş¼ã¼*cascade08ã¼ä¼ ä¼í¼*cascade08í¼ï¼ ï¼÷¼*cascade08÷¼ù¼ *cascade08ù¼û¼*cascade08û¼‡½ *cascade08‡½½ ½½*cascade08½Ÿ½ Ÿ½ ½*cascade08 ½¢½ ¢½¤½ *cascade08
+¤½¨½¨½«½ *cascade08«½®½ ®½È½ *cascade08
+È½É½É½Ì½ *cascade08Ì½ß½ ß½à½ *cascade08à½á½ á½â½ *cascade08â½ë½ ë½ï½ *cascade08ï½¾ ¾†¾*cascade08†¾‡¾ ‡¾¾ *cascade08¾‘¾ *cascade08‘¾’¾ *cascade08’¾•¾ *cascade08•¾¡¾ *cascade08¡¾§¾ §¾ª¾*cascade08ª¾«¾ «¾­¾ *cascade08­¾´¾ *cascade08
+´¾µ¾µ¾¶¾ *cascade08¶¾½¾ ½¾¿¾ *cascade08¿¾Å¾ Å¾Æ¾ *cascade08Æ¾Ê¾ Ê¾Ì¾ *cascade08
+Ì¾Ï¾Ï¾Ğ¾ *cascade08Ğ¾Ñ¾ Ñ¾Ò¾*cascade08Ò¾â¾ â¾ã¾ *cascade08
+ã¾ä¾ä¾æ¾ *cascade08æ¾é¾ é¾ê¾ *cascade08ê¾ì¾ ì¾î¾ *cascade08
+î¾ğ¾ğ¾€¿ *cascade08
+€¿¿¿˜¿ *cascade08˜¿š¿ *cascade08š¿¢¿ *cascade08
+¢¿¤¿¤¿¥¿ *cascade08
+¥¿¨¿¨¿©¿ *cascade08
+©¿µ¿µ¿·¿ *cascade08
+·¿¹¿¹¿º¿ *cascade08
+º¿½¿½¿À¿ *cascade08À¿Á¿*cascade08Á¿Ã¿ Ã¿Å¿ *cascade08
+Å¿Ï¿Ï¿Ñ¿ *cascade08Ñ¿Õ¿*cascade08Õ¿×¿ ×¿â¿ *cascade08â¿å¿ *cascade08å¿ö¿ *cascade08ö¿÷¿ *cascade08÷¿œÀ œÀ»À *cascade08»À¾À *cascade08
+¾ÀÁÀÁÀÈÀ *cascade08ÈÀÒÀ ÒÀÔÀ *cascade08ÔÀÙÀ ÙÀÚÀ *cascade08ÚÀİÀ*cascade08İÀßÀ *cascade08ßÀáÀ áÀãÀ*cascade08ãÀäÀ äÀåÀ *cascade08åÀæÀ*cascade08æÀèÀ *cascade08èÀéÀ *cascade08éÀíÀ *cascade08íÀîÀ îÀïÀ*cascade08ïÀğÀ ğÀùÀ*cascade08ùÀûÀ ûÀÿÀ*cascade08ÿÀ€Á €Á‚Á *cascade08‚ÁˆÁ ˆÁ£Á *cascade08£ÁªÁ ªÁ®Á*cascade08®ÁµÁ µÁ¶Á *cascade08¶ÁÕÁ ÕÁÖÁ*cascade08ÖÁÜÁ ÜÁİÁ *cascade08İÁæÁ æÁéÁ*cascade08éÁ”Â ”Â•Â *cascade08•Â¦Â ¦Â¨Â *cascade08
+¨Â©Â©ÂªÂ *cascade08
+ªÂ°Â°Â³Â *cascade08³ÂÀÂ ÀÂÎÂ *cascade08ÎÂÏÂ *cascade08ÏÂçÂ *cascade08çÂéÂ *cascade08éÂÃ ÃŠÃ *cascade08ŠÃ‹Ã *cascade08‹Ã‘Ã ‘Ã“Ã *cascade08“ÃÃ Ã§Ã *cascade08§Ã½Ã ½Ã¾Ã *cascade08¾ÃÆÃ*cascade08ÆÃÇÃ *cascade08ÇÃËÃ*cascade08ËÃÌÃ *cascade08ÌÃĞÃ*cascade08ĞÃÑÃ *cascade08ÑÃ‚Ä*cascade08‚Ä–Ä *cascade08–Ä—Ä *cascade08—ÄÄ ÄŸÄ *cascade08ŸÄ Ä *cascade08 Ä¡Ä *cascade08¡Ä¤Ä *cascade08¤Ä¦Ä ¦Ä§Ä *cascade08§Ä©Ä *cascade08©Ä·Ä ·Ä¸Ä *cascade08
+¸ÄºÄºÄÆÄ *cascade08
+ÆÄÇÄÇÄãÄ *cascade08ãÄçÄ çÄèÄ*cascade08èÄêÄ *cascade08
+êÄïÄïÄñÄ *cascade08ñÄıÄ ıÄÅ *cascade08ÅÅ*cascade08Å‘Å ‘Å’Å *cascade08’Å”Å*cascade08”Å–Å –Å—Å *cascade08—Å˜Å *cascade08
+˜Å™Å™Å¬Å *cascade08
+¬Å°Å°Å´Å *cascade08´ÅµÅ *cascade08
+µÅ¹Å¹ÅºÅ *cascade08ºÅãÅ ãÅäÅ*cascade08äÅ÷Å ÷ÅüÅ*cascade08üÅıÅ ıÅ€Æ*cascade08€Æ“Æ “Æ±Æ*cascade08±Æ¸Æ ¸Æ¹Æ *cascade08¹Æ¼Æ ¼Æ½Æ *cascade08½Æ¿Æ ¿ÆÁÆ *cascade08ÁÆÓÆ ÓÆçÆ *cascade08çÆëÆ*cascade08ëÆìÆ *cascade08
+ìÆíÆíÆïÆ *cascade08
+ïÆğÆğÆóÆ *cascade08
+óÆõÆõÆûÆ *cascade08
+ûÆÿÆÿÆƒÇ*cascade08ƒÇ…Ç*cascade08…Ç†Ç *cascade08†Ç‰Ç*cascade08‰ÇÇ ÇŸÇ *cascade08ŸÇ¦Ç ¦Ç§Ç *cascade08
+§Ç¨Ç¨Ç©Ç *cascade08©Ç¬Ç ¬Ç°Ç*cascade08°ÇÀÇ ÀÇÁÇ *cascade08ÁÇËÇ ËÇÌÇ *cascade08
+ÌÇÍÇÍÇÎÇ *cascade08ÎÇäÇ äÇçÇ*cascade08çÇèÇ*cascade08èÇîÇ*cascade08îÇñÇ ñÇòÇ *cascade08òÇõÇ *cascade08õÇùÇ ùÇ‰È *cascade08‰ÈŠÈ *cascade08
+ŠÈÈÈ•È *cascade08•È—È —È˜È *cascade08˜ÈŸÈ ŸÈ È *cascade08
+ È¡È¡È¢È *cascade08¢È¨È ¨È©È*cascade08©ÈªÈ *cascade08ªÈ­È *cascade08­È²È *cascade08
+²ÈºÈºÈÂÈ*cascade08ÂÈÅÈ ÅÈÆÈ *cascade08ÆÈÉÈ *cascade08ÉÈÑÈ ÑÈÓÈ*cascade08ÓÈÜÈ ÜÈİÈ*cascade08İÈæÈ æÈçÈ*cascade08çÈèÈ èÈ‹É*cascade08‹ÉÉ ÉªÉ *cascade08ªÉ«É *cascade08«É¬É ¬É­É *cascade08
+­É®É®É°É *cascade08°É±É *cascade08±ÉÇÉ *cascade08ÇÉĞÉ ĞÉ×É *cascade08×ÉÜÉ ÜÉİÉ*cascade08İÉßÉ ßÉêÉ*cascade08êÉóÉ óÉõÉ *cascade08õÉøÉ øÉüÉ*cascade08üÉşÉ şÉ€Ê*cascade08€ÊÊ Ê‚Ê*cascade08‚ÊƒÊ ƒÊ„Ê*cascade08„Ê…Ê …Ê’Ê *cascade08’Ê–Ê –ÊÏÊ *cascade08ÏÊÓÊ*cascade08ÓÊÙÊ *cascade08ÙÊİÊ*cascade08İÊ²Ë *cascade08²ËÅË ÅËÔË*cascade08ÔËÖË *cascade08ÖËØË *cascade08ØËÛË *cascade08ÛËûË *cascade08ûËüË *cascade08üËƒÌ ƒÌ„Ì *cascade08„ÌÌ ÌŸÌ *cascade08
+ŸÌ Ì Ì¡Ì *cascade08¡Ì£Ì £Ì§Ì*cascade08§ÌÃÌ ÃÌËÌ*cascade08ËÌèÌ *cascade08èÌëÌ *cascade08ëÌìÌ *cascade08ìÌíÌ íÌïÌ*cascade08ïÌñÌ ñÌôÌ*cascade08ôÌõÌ õÌúÌ*cascade08úÌüÌ üÌşÌ *cascade08şÌ€Í*cascade08€Í›Í *cascade08›Í¼Í ¼Í½Í *cascade08½ÍÍÍ ÍÍÎÍ*cascade08ÎÍéÍ éÍêÍ*cascade08êÍìÍ ìÍÎ *cascade08Î§Î §Î©Î *cascade08©ÎªÎ*cascade08ªÎ®Î ®ÎÂÎ *cascade08ÂÎÇÎ ÇÎÊÎ*cascade08ÊÎÍÎ *cascade08ÍÎÏÎ *cascade08
+ÏÎÒÎÒÎæÎ *cascade08æÎíÎ íÎïÎ *cascade08ïÎˆÏ ˆÏ‘Ï*cascade08‘Ï’Ï ’Ï¦Ï*cascade08¦Ï§Ï *cascade08§Ï©Ï*cascade08©Ï·Ï *cascade08·Ï»Ï »Ï¾Ï *cascade08¾ÏÁÏ *cascade08ÁÏÂÏ ÂÏÏÏ*cascade08ÏÏĞÏ ĞÏÕÏ*cascade08ÕÏÖÏ ÖÏİÏ*cascade08İÏŞÏ *cascade08ŞÏßÏ*cascade08ßÏâÏ âÏìÏ*cascade08ìÏíÏ *cascade08íÏóÏ*cascade08óÏôÏ ôÏûÏ*cascade08ûÏüÏ üÏıÏ*cascade08ıÏşÏ şÏäĞ *cascade08äĞåĞ *cascade08åĞæĞ æĞîĞ*cascade08îĞïĞ ïĞñĞ*cascade08ñĞòĞ òĞóĞ*cascade08óĞôĞ ôĞ‡Ñ*cascade08‡ÑˆÑ ˆÑŒÑ*cascade08ŒÑÑ*cascade08Ñ’Ñ*cascade08’Ñ“Ñ *cascade08“Ñ×Ñ *cascade08×ÑØÑ *cascade08ØÑàÑ*cascade08àÑáÑ áÑèÑ*cascade08èÑéÑ éÑìÑ*cascade08ìÑíÑ íÑıÑ*cascade08ıÑşÑ şÑŒÒ*cascade08ŒÒÒ*cascade08ÒÒ Ò—Ò*cascade08—Ò˜Ò ˜Ò½Ò *cascade08½ÒÀÒ *cascade08ÀÒÁÒ *cascade08ÁÒÂÒ ÂÒÃÒ*cascade08ÃÒÄÒ ÄÒÍÒ*cascade08ÍÒÎÒ ÎÒÛÒ *cascade08ÛÒùÒ ùÒıÒ*cascade08ıÒÿÒ *cascade08ÿÒ€Ó €Ó…Ó *cascade08…Ó†Ó*cascade08†Ó©Ó *cascade08©ÓªÓ ªÓ«Ó*cascade08«Ó¬Ó ¬Ó¯Ó*cascade08¯ÓµÓ µÓÒÓ *cascade08ÒÓÓÓ *cascade08ÓÓóÓ *cascade08óÓôÓ ôÓ‡Ô*cascade08‡ÔˆÔ *cascade08ˆÔ‰Ô*cascade08
+‰ÔŠÔŠÔŒÔ*cascade08ŒÔÔ *cascade08Ô‘Ô *cascade08
+‘Ô•Ô•Ô©Ô *cascade08©Ô­Ô *cascade08­Ô¯Ô *cascade08¯Ô³Ô *cascade08³Ô´Ô *cascade08´Ô»Ô *cascade08»ÔÅÔ*cascade08ÅÔÈÔ *cascade08ÈÔÏÔ*cascade08ÏÔĞÔ *cascade08ĞÔ§Õ *cascade08§Õ¨Õ*cascade08¨Õ°Õ *cascade08°Õ´Õ*cascade08´ÕßÕ *cascade08ßÕàÕ *cascade08àÕëÕ*cascade08ëÕìÕ *cascade08ìÕñÕ*cascade08ñÕòÕ *cascade08òÕóÕ*cascade08óÕôÕ *cascade08ôÕ†Ö*cascade08†Ö‡Ö *cascade08‡Ö‰Ö*cascade08‰ÖŠÖ ŠÖÖ*cascade08ÖÖ Ö”Ö*cascade08”Ö•Ö *cascade08•Ö¦Ö*cascade08
+¦Ö§Ö§ÖäÖ *cascade08äÖåÖ *cascade08åÖğÖ *cascade08ğÖñÖ *cascade08ñÖñ× *cascade08ñ×ó× ó×™Ø*cascade08™ØšØ šØØ*cascade08Ø¡Ø ¡Ø«Ø *cascade08«ØÇØ ÇØÍØ*cascade08ÍØÎØ ÎØñØ *cascade08ñØòØ *cascade08òØÃÙ *cascade08ÃÙÄÙ*cascade08ÄÙöÙ *cascade08öÙ÷Ù ÷ÙƒÚ*cascade08ƒÚ„Ú „ÚŒÚ*cascade08ŒÚÚ ÚŸÚ *cascade08ŸÚ Ú  ÚàÚ *cascade08àÚäÚ*cascade08äÚÛ *cascade08ÛŸÛ ŸÛÕÛ *cascade08ÕÛÙÛ*cascade08ÙÛåÛ *cascade08åÛæÛ æÛíÛ*cascade08íÛîÛ îÛûÛ *cascade08ûÛıÛ *cascade08ıÛôÜ *cascade08ôÜõÜ*cascade08õÜŠİ *cascade08Šİ‹İ ‹İ˜İ *cascade08˜İ™İ *cascade08™İÍİ *cascade08ÍİÏİ Ïİ‰Ş *cascade08‰ŞŠŞ ŠŞ‘Ş *cascade08‘Ş•Ş*cascade08•Ş·Ş *cascade08·ŞºŞ *cascade08ºŞ¼Ş*cascade08¼ŞÔŞ *cascade08
+ÔŞØŞØŞæŞ *cascade08æŞçŞ *cascade08çŞŒß *cascade08Œßß *cascade08ß´à *cascade08´àµà *cascade08µà·à *cascade08
+·àºàºàÃá *cascade08ÃáËá *cascade08Ëáôá*cascade08ôáöá öáÌâ *cascade08ÌâÍâ ÍâĞâ*cascade08ĞâÑâ ÑâØâ*cascade08ØâÛâ ÛâÜâ*cascade08Üâİâ*cascade08İâçâ*cascade08çâèâ èâñâ *cascade08ñâóâ *cascade08óâüâ *cascade08üâıâ ıâ¥ã *cascade08¥ã¦ã ¦ã¶ã*cascade08¶ã¸ã ¸ãÄã*cascade08ÄãÌã Ìã•ä*cascade08•ä–ä –äöä *cascade08öäøä*cascade08øäÖå *cascade08ÖåÚå Úå‡æ*cascade08‡æ‰æ ‰ææ*cascade08æ°æ °æ¼æ *cascade08¼æ½æ ½æçæ *cascade08çæêæ*cascade08êæ•ç *cascade08•ç–ç –ç³ç*cascade08³çµç *cascade08µç¹ç *cascade08¹çÜç *cascade08ÜçŞç Şçàç *cascade08àçäç äçè*cascade08è”è ”è•è*cascade08•è–è –è—è *cascade08—èè èè*cascade08èŸè Ÿè è*cascade08 è¥è ¥è¦è *cascade08¦èÇè*cascade08ÇèÈè *cascade08Èèßè *cascade08ßèÁê Áêêê*cascade08êêÉë Éëòë*cascade08òëïí ïíòí *cascade08òíöí*cascade08öí¶î *cascade08¶îºî*cascade08ºîÅî *cascade08ÅîÆî ÆîËî*cascade08ËîÌî *cascade08Ìî×î*cascade08×îØî *cascade08Øî”ï *cascade08”ï•ï *cascade08•ïŸï*cascade08Ÿï ï  ï²ï*cascade08²ï³ï ³ïßï*cascade08ßïàï àïãï*cascade08ãïşï şïğ*cascade08ğğ ğ³ğ *cascade08³ğ¶ğ*cascade08¶ğíğ *cascade08íğîğ *cascade08îğñ *cascade08ññ ñ°ñ *cascade08°ñ´ñ*cascade08´ñ¼ñ *cascade08¼ñ¾ñ*cascade08¾ñÜñ *cascade08Üñßñ *cascade08ßñÑò *cascade08ÑòÒò *cascade08Òò‚ô *cascade08‚ô„ô „ô…ô *cascade08…ôšô*cascade08šô›ô ›ô²ô *cascade08²ô·ô ·ô¹ô *cascade08¹ôÃô ÃôÎô*cascade08Îôóô óôøô *cascade08øôúô *cascade08úô˜ö *cascade08˜ö²ö ²ö¸ö *cascade08¸ö×ö ×öÚö *cascade08Úöâö *cascade08âö€÷ *cascade08€÷‚÷*cascade08‚÷„÷ *cascade08„÷…÷ …÷†÷ *cascade08†÷÷*cascade08
+÷÷÷÷ *cascade08÷÷ ÷˜÷*cascade08˜÷œ÷ œ÷©÷*cascade08©÷«÷ «÷¬÷*cascade08¬÷®÷ ®÷¾÷*cascade08¾÷¿÷ ¿÷É÷*cascade08É÷Ö÷ Ö÷ø÷ *cascade08ø÷ü÷*cascade08ü÷‚ø ‚ø‡ø*cascade08‡ø—ø *cascade08—ø§ø §øªø*cascade08ªø­ø ­ø¹ø *cascade08¹øÆø ÆøÉø*cascade08ÉøØø ØøÚø*cascade08ÚøŞø Şø›ù*cascade08›ùù ù¿ù *cascade08¿ùäù äùæù *cascade08
+æùéùéùêù *cascade08êùëù *cascade08ëùíù *cascade08íùñù*cascade08ñù‰ú *cascade08‰úŠú *cascade08
+ŠúŒúŒúú *cascade08úú ú¦ú *cascade08¦ú©ú *cascade08©ú±ú ±úËú *cascade08
+ËúÏúÏúĞú *cascade08
+ĞúÖúÖú×ú *cascade08
+×úÙúÙúÚú *cascade08Úúû û‚û*cascade08‚û‡û ‡ûˆû *cascade08
+ˆû‰û‰ûŠû *cascade08Šûû ûû*cascade08û‘û *cascade08‘û•û •û–û *cascade08–û˜û ˜û™û *cascade08™ûšû*cascade08šû›û *cascade08›ûŸû Ÿû û *cascade08 û£û £ûÇû*cascade08ÇûÊû Êûçû *cascade08çûèû *cascade08èûéû *cascade08éûêû *cascade08êû™ü ™üšü*cascade08šüæü æüìü*cascade08ìüîü îüı *cascade08ı‘ı ‘ı’ı*cascade08’ı“ı “ı¹ı *cascade08¹ıºı *cascade08ºıÁı ÁıÂı*cascade08ÂıÃı ÃıÅı*cascade08ÅıÆı ÆıÊı*cascade08ÊıËı ËıÓı*cascade08ÓıÔı *cascade08ÔıØı*cascade08ØıÙı Ùıİı*cascade08İıŞı Şıàı*cascade08àıæı æıèı*cascade08èıéı éıëı*cascade08ëığı ğıÑş *cascade08ÑşÖş Öş×ş *cascade08×şöş öşùş*cascade08ùşÿ *cascade08ÿ…ÿ*cascade08…ÿ¡ÿ *cascade08¡ÿ¹ÿ ¹ÿ»ÿ *cascade08»ÿ¾ÿ *cascade08¾ÿÒÿ *cascade08Òÿöÿ öÿúÿ*cascade08úÿÿÿ *cascade08
+ÿÿ„€„€†€ *cascade08
+†€‰€‰€Œ€ *cascade08Œ€€ *cascade08
+€€€‘€ *cascade08‘€’€ *cascade08
+’€•€•€–€ *cascade08
+–€—€—€˜€ *cascade08˜€™€ *cascade08
+™€€€Ÿ€ *cascade08
+Ÿ€ € €¡€ *cascade08¡€¢€*cascade08¢€¤€ *cascade08
+¤€¥€¥€Ë€*cascade08Ë€Ï€ *cascade08
+Ï€Ğ€Ğ€ì€ *cascade08ì€ï€ ï€ğ€ *cascade08
+ğ€õ€õ€ö€ *cascade08
+ö€÷€÷€ù€ *cascade08
+ù€ş€ş€€ *cascade08
+€‚‚ƒ *cascade08ƒ… …–*cascade08–— —˜ *cascade08˜š *cascade08š*cascade08Ÿ Ÿ· *cascade08
+·¸¸¾ *cascade08¾Ê ÊÌ*cascade08Ìß ßç *cascade08çè *cascade08èò ò¯‚*cascade08¯‚¶‚ *cascade08¶‚Â‚ *cascade08Â‚Ê‚*cascade08
+Ê‚Î‚Î‚Ï‚ *cascade08Ï‚Ğ‚ *cascade08Ğ‚Ñ‚ *cascade08Ñ‚Ò‚ *cascade08Ò‚Ş‚ *cascade08Ş‚á‚ á‚£ƒ*cascade08£ƒ¤ƒ ¤ƒ¦ƒ *cascade08¦ƒ¨ƒ*cascade08¨ƒÜƒ *cascade08Üƒßƒ ßƒâƒ*cascade08âƒçƒ çƒéƒ *cascade08éƒëƒ *cascade08ëƒŠ„ *cascade08Š„˜„ ˜„›„*cascade08›„œ„ œ„«„*cascade08«„¬„ ¬„¹„*cascade08¹„º„ º„¾„*cascade08¾„¿„ ¿„Á„*cascade08Á„Â„ Â„Æ„*cascade08Æ„Ç„ Ç„Ë„*cascade08Ë„Ì„ Ì„Î„*cascade08Î„Ï„ Ï„… *cascade08…‘… ‘…’…*cascade08’…”… ”…•… *cascade08
+•…–…–…—… *cascade08—…º… *cascade08º…»… »…¼… *cascade08¼…Ã… *cascade08Ã…Å… *cascade08Å…È… È…Š†*cascade08Š†‹† ‹†¹† *cascade08¹†½†*cascade08½†Á† Á†Â† *cascade08
+Â†Ñ†Ñ†Õ†*cascade08Õ†æ† *cascade08æ†÷† *cascade08÷†ı† ı†ş† *cascade08ş†€‡ €‡Â‡*cascade08Â‡Ã‡ Ã‡ô‡ *cascade08ô‡õ‡ *cascade08õ‡Œˆ Œˆˆ *cascade08ˆ©ˆ ©ˆªˆ *cascade08ªˆ¯ˆ ¯ˆ±ˆ *cascade08±ˆ²ˆ *cascade08²ˆÕˆ *cascade08ÕˆÜˆ Üˆİˆ *cascade08İˆ÷ˆ *cascade08÷ˆøˆ *cascade08øˆ€‰ €‰‰ *cascade08‰‰‰ ‰‰Š‰ *cascade08
+Š‰‰‰‰ *cascade08‰•‰ •‰–‰ *cascade08–‰¥‰ ¥‰Ç‰ *cascade08Ç‰Ë‰ Ë‰Ï‰*cascade08Ï‰Ó‰ Ó‰Ô‰ *cascade08
+Ô‰ê‰ê‰ì‰*cascade08ì‰ş‰ *cascade08
+ş‰†Š†ŠŠ *cascade08
+Š•Š•Š˜Š *cascade08˜Š§Š *cascade08§Š§Š*cascade08§Š´Š *cascade08
+´Š¶Š¶Š·Š *cascade08·Š¿Š ¿ŠÀŠ*cascade08ÀŠÂŠ ÂŠŞŠ *cascade08ŞŠàŠ àŠáŠ *cascade08
+áŠëŠëŠìŠ *cascade08ìŠíŠ *cascade08
+íŠÿŠÿŠ€‹ *cascade08
+€‹”‹”‹•‹ *cascade08
+•‹Ÿ‹Ÿ‹¦‹ *cascade08¦‹º‹*cascade08º‹Æ‹ *cascade08Æ‹Ö‹ *cascade08Ö‹Ş‹ *cascade08Ş‹à‹*cascade08à‹ç‹ *cascade08ç‹è‹*cascade08è‹«Œ *cascade08«Œ­Œ *cascade08­ŒìŒ *cascade08ìŒöŒ öŒ’ *cascade08
+’šš› *cascade08›£ £¶ *cascade08¶· *cascade08·È *cascade08ÈÊ*cascade08ÊÌ *cascade08ÌĞ*cascade08Ğå *cascade08
+åçç˜ *cascade08
+˜™™ *cascade08· *cascade08
+·½½Û *cascade08Ûé *cascade08éê*cascade08êù *cascade08ùˆ*cascade08ˆ‘ *cascade08
+‘¡¡¢ *cascade08¢¦ ¦¬*cascade08¬± ±³ *cascade08³¹ ¹× *cascade08×ï ïñ *cascade08ñò *cascade08ò‰ *cascade08‰Ã *cascade08Ãİ *cascade08İá*cascade08áî *cascade08îı ış *cascade08
+şƒ‘ƒ‘„‘ *cascade08
+„‘…‘…‘†‘ *cascade08
+†‘‹‘‹‘Œ‘ *cascade08Œ‘‘ ‘’‘ *cascade08
+’‘•‘•‘–‘ *cascade08
+–‘™‘™‘‘ *cascade08‘Ÿ‘ *cascade08Ÿ‘£‘*cascade08£‘»‘ *cascade08»‘Ì‘ *cascade08
+Ì‘Í‘Í‘Ò‘ *cascade08Ò‘Ø‘ Ø‘Ù‘*cascade08Ù‘à‘ à‘í‘ *cascade08í‘î‘*cascade08î‘ğ‘ *cascade08
+ğ‘’’’ *cascade08’’’ ’’”’ *cascade08”’¦’ ¦’º’ *cascade08º’»’ *cascade08»’Ç’ *cascade08Ç’É’ *cascade08É’Ë’ Ë’Ì’*cascade08Ì’Í’ Í’Î’*cascade08Î’Ï’ Ï’Ò’*cascade08Ò’Ó’ *cascade08Ó’ã’*cascade08ã’å’ *cascade08å’ç’ *cascade08ç’ı’ *cascade08ı’‡“ *cascade08‡“‰“*cascade08‰“Š“ Š“Œ“*cascade08Œ““ ““*cascade08“–“ *cascade08
+–“›“›“¥“ *cascade08
+¥“¦“¦“«“ *cascade08
+«“¬“¬“Õ“*cascade08Õ“Ö“ *cascade08Ö“â“ *cascade08
+â“ã“ã“æ“ *cascade08
+æ“ê“ê“î“ *cascade08
+î“ï“ï“ş“ *cascade08
+ş“™”™”š” *cascade08š”›” *cascade08›”£”*cascade08£”¥” *cascade08¥”§”*cascade08§”½” *cascade08
+½”¾”¾”À” *cascade08
+À”Á”Á”Ã” *cascade08Ã”É”*cascade08É”Ú” *cascade08Ú”Ş” *cascade08Ş”‚• *cascade08‚•ƒ• *cascade08ƒ•†• *cascade08†••*cascade08•Í• Í•Ñ• *cascade08Ñ•Ò•*cascade08Ò•î• *cascade08î•ñ• *cascade08ñ•– *cascade08–“–*cascade08“–Î– *cascade08Î–Ñ– *cascade08Ñ–Ò– *cascade08Ò–Ó– *cascade08Ó–Õ– *cascade08Õ–Ø–*cascade08Ø–Ù– Ù–Ú–*cascade08Ú–Û– Û–Ş–*cascade08Ş–ß– ß–ã–*cascade08ã–“— *cascade08“—•— *cascade08•—˜— *cascade08
+˜—¢—¢—È— *cascade08È—É—*cascade08É—Í— *cascade08
+Í—Î—Î—Ï— *cascade08
+Ï—Ñ—Ñ—Ò— *cascade08
+Ò—ß—ß—æ— *cascade08æ—ê—*cascade08ê—Š˜ *cascade08Š˜˜ ˜“˜ *cascade08“˜ª˜ *cascade08ª˜²˜ *cascade08²˜¶˜*cascade08¶˜º˜ *cascade08
+º˜½˜½˜¾˜ *cascade08¾˜¿˜ *cascade08
+¿˜Â˜Â˜Ã˜ *cascade08
+Ã˜Æ˜Æ˜Í˜ *cascade08Í˜Ï˜*cascade08Ï˜ò˜ *cascade08ò˜ü˜ ü˜ş˜ *cascade08ş˜‚™*cascade08‚™š™ *cascade08š™Ÿ™ Ÿ™¶™ *cascade08¶™¹™ *cascade08¹™Á™ Á™Ø™ *cascade08Ø™Û™*cascade08Û™ù™ ù™š *cascade08š—š —š™š *cascade08™šœš *cascade08œš©š *cascade08©š¹š ¹š½š*cascade08½šÅš ÅšÇš *cascade08Çšİš İšßš*cascade08ßšÊœ ÊœÍœ*cascade08Íœ— —˜ *cascade08˜¥ ¥¨ *cascade08¨³Ÿ ³ŸÉŸ *cascade08ÉŸÍŸ ÍŸÑŸ*cascade08ÑŸæŸ æŸéŸ*cascade08éŸ—  — ¸£*cascade08¸£Ö£ Ö£Ø£ *cascade08Ø£Ü£*cascade08Ü£ñ£ *cascade08ñ£ò£ ò£ô£*cascade08ô£ˆ¤ ˆ¤‘¤*cascade08‘¤†¥ †¥¥*cascade08¥”¥ ”¥–¥ *cascade08–¥š¥*cascade08š¥²¥ *cascade08²¥×¥ ×¥Ş¥*cascade08Ş¥á¥ á¥ä¥*cascade08ä¥å¥ å¥æ¥*cascade08æ¥ù¥ ù¥ü¥ *cascade08ü¥€¦*cascade08€¦ˆ¦ 
+ˆ¦¤¦¤¦¥¦ ¥¦§¦ *cascade08§¦¨¦*cascade08¨¦·¦ *cascade08·¦÷¦ ÷¦ú¦ *cascade08ú¦¹§ ¹§½§*cascade08½§¨ ¨‘¨ *cascade08‘¨•¨ •¨²¨ *cascade08²¨³¨*cascade08³¨Ÿ© Ÿ©¹© *cascade08¹©½©*cascade08½©Ü© Ü©ö© *cascade08ö©”ª ”ª–ª*cascade08–ªŞª Şªáª *cascade08áªÍ« Í«ë« *cascade08ë«¬ ¬ ¬ *cascade08 ¬Ç¬ Ç¬å¬ *cascade08å¬Š® Š®¨® *cascade08¨®À® À®Ì® *cascade08Ì®Ğ® Ğ®Ñ® *cascade08Ñ®ï® ï®ğ® *cascade08ğ®Š¯ Š¯‹¯ *cascade08
+‹¯º¯º¯¼¯ *cascade08¼¯¿¯*cascade08¿¯Ø¯ *cascade08Ø¯´° ´°¶° *cascade08¶°æ° æ°è°*cascade08è°ò° ò°ô° *cascade08ô°¿± ¿±À± *cascade08À±Â± *cascade08Â±Å± *cascade08Å±Ş± *cascade08Ş±Ê² Ê²Ì² *cascade08Ì²Í²*cascade08Í²è² *cascade08è²†³ †³³ *cascade08³ ³ *cascade08 ³™´ ™´´*cascade08´õ´ õ´ö´ *cascade08ö´”µ *cascade08
+”µ›µ›µœµ *cascade08œµÂµ ÂµÃµ*cascade08Ãµíµ íµîµ *cascade08îµğµ *cascade08ğµóµ *cascade08óµŒ¶ *cascade08Œ¶“¶ *cascade08“¶²¶ ²¶³¶ *cascade08³¶ı¶ ı¶ş¶ *cascade08
+ş¶ƒ·ƒ·…· *cascade08
+…···· *cascade08·±· ±·Ï· *cascade08Ï·Ô· Ô·Õ· *cascade08Õ·ß· ß·á·*cascade08á·Ş¸ Ş¸ø¸ *cascade08ø¸ü¸*cascade08ü¸ˆ¹ ˆ¹‰¹ *cascade08‰¹¬¹ ¬¹­¹*cascade08­¹çº çº…» *cascade08…»» »’» *cascade08’»¹» ¹»º» *cascade08º»Í» Í»Ï» *cascade08
+Ï»Ú»Ú»Û» *cascade08Û»ñ» ñ»ó» *cascade08ó»ö»*cascade08ö»¼ *cascade08¼•¼ •¼–¼ *cascade08–¼£¼ £¼¤¼ *cascade08¤¼ª¼ ª¼«¼ *cascade08«¼¹¼ ¹¼Ó¼ *cascade08Ó¼Û¼ Û¼İ¼ *cascade08İ¼Í½ Í½Ï½*cascade08Ï½Æ¾ Æ¾É¾ *cascade08É¾»¿ »¿¾¿*cascade08¾¿ãÀ ãÀÁ *cascade08Á‘Á ‘Á•Á*cascade08•ÁÊÁ ÊÁÌÁ *cascade08ÌÁâÂ âÂäÂ *cascade08äÂçÂ çÂ÷Â *cascade08÷ÂøÂ*cascade08
+øÂ€Ã€Ã„Ã*cascade08„ÃÃ *cascade08Ã‹Ä ‹ÄŒÄ *cascade08ŒÄ†Æ †ÆŠÆ*cascade08ŠÆ‘Æ ‘Æ•Æ*cascade08•Æ§Ç §Ç©Ç *cascade08©Ç˜È ˜ÈšÈ *cascade08šÈÈ*cascade08È¶È *cascade08¶ÈÏÈ ÏÈĞÈ *cascade08ĞÈïÉ ïÉóÉ*cascade08óÉ—Ê —Ê›Ê*cascade08›Ê£Ê £Ê¤Ê*cascade08¤Ê¬Ê ¬Ê¯Ê*cascade08¯Ê¿Ê*cascade08¿Ê¯Ë ¯Ë°Ë *cascade08°ËŞÌ ŞÌàÌ *cascade08àÌçÍ çÍ‚Î *cascade08‚Î…Î *cascade08…Î¬Î ¬Î®Î*cascade08®Î„Ï „ÏÏ *cascade08Ï¢Ï*cascade08¢ÏçÏ çÏêÏ*cascade08êÏûÏ ûÏˆĞ*cascade08ˆĞ‘Ğ ‘Ğ“Ğ *cascade08“ĞŠÒ ŠÒÒ *cascade08ÒÒÒ ÒÒÖÒ*cascade08ÖÒáÒ áÒäÒ*cascade08äÒµÓ µÓ·Ó *cascade08·ÓºÓ *cascade08ºÓÓÓ *cascade08ÓÓ¯Ö ¯Ö¯Ö*cascade08¯Ö³Ö*cascade08³Ö»Ö »ÖÀÖ *cascade08ÀÖÂÖ ÂÖÃÖ*cascade08ÃÖøÖ øÖûÖ *cascade08ûÖÄ× Ä×È×*cascade08È×Ø ØØ *cascade08ØúØ úØüØ *cascade08üØÿØ*cascade08ÿØ˜Ù *cascade08˜ÙÛ ÛƒÛ*cascade08ƒÛÛ ÛŸÛ *cascade08ŸÛÊÜ ÊÜæÜ *cascade08æÜèÜ *cascade08èÜäİ äİæİ *cascade08æİêİ*cascade08êİ‚Ş *cascade08‚Ş¤Ş ¤Ş¥Ş *cascade08¥Şß ßß *cascade08ß½à ½àÖà *cascade08Öà×à ×àÛà*cascade08Ûàçà çàéà*cascade08éà˜á ˜á¡á *cascade08¡áÛá Ûáùá *cascade08ùá‚â ‚â…â *cascade08…âüâ üâÿâ*cascade08ÿâßã ßãâã *cascade08âã ä  ä£ä *cascade08£ä×ä ×äÚä*cascade08Úäüä üäşä *cascade08şäå å‘å *cascade08‘åÒå ÒåÓå *cascade08
+ÓåÕåÕåÖå *cascade08Öåöå öåùå*cascade08ùå†æ †æ‡æ *cascade08‡æÖæ ÖæØæ*cascade08Øæàæ àæäæ*cascade08äæ­ç ­ç±ç*cascade08±ç¼ç ¼çÃç *cascade08
+ÃçĞçĞçÑç *cascade08
+Ñçàçàçáç *cascade08áçüç üçıç *cascade08ıçœè œèè *cascade08
+è¾è¾è¿è *cascade08¿èìè ìèğè*cascade08ğèøè øèúè*cascade08úè‚é ‚é„é*cascade08„éŒé Œéšé*cascade08šéœé œéé*cascade08é é *cascade08 éÈé ÈéÒé*cascade08ÒéÓé ÓéÕé*cascade08ÕéÖé Öéİé*cascade08İéßé ßéàé*cascade08àéùé ùéäê *cascade08äêæê *cascade08æêšë *cascade08šëœë*cascade08œëËì *cascade08ËìÎì*cascade08ÎìÂí *cascade08ÂíÃí *cascade08Ãí€ï *cascade08€ï„ï*cascade08„ï“ğ *cascade08“ğ”ğ *cascade08”ğÛğ *cascade08Ûğİğ*cascade08İğ¤ñ *cascade08¤ñ¥ñ *cascade08¥ñàñ *cascade08àñäñ*cascade08äñÓò *cascade08ÓòÖò*cascade08Öòñó *cascade08ñóõó*cascade08õóıó *cascade08ıóô*cascade08ôô *cascade08ô®ô*cascade08®ô±ô*cascade08±ô»ô*cascade08»ôŒö *cascade08Œöö *cascade08ö†÷ *cascade08†÷ˆ÷ *cascade08ˆ÷–ù *cascade08–ù™ù*cascade08™ù›û *cascade08›ûû*cascade08ûºü *cascade08ºü½ü*cascade08½ü»ı *cascade08»ı¿ı*cascade08¿ıûı *cascade08ûııı *cascade08ıı–‚ *cascade08–‚—‚ *cascade08—‚Ú‚ *cascade08Ú‚€ƒ *cascade08€ƒˆƒ *cascade08ˆƒŠƒ *cascade08Šƒôƒ *cascade08ôƒõƒ*cascade08õƒŸ„ *cascade08Ÿ„¢„ *cascade08¢„í† *cascade08í†ğ† *cascade08ğ†ˆ *cascade08ˆ“ˆ*cascade08“ˆÔˆ *cascade08Ôˆ÷ˆ *cascade08÷ˆúˆ *cascade08úˆò‰ *cascade08ò‰ô‰*cascade08ô‰Š *cascade08Š Š *cascade08 Š¾Œ *cascade08¾Œ¿Œ*cascade08¿ŒÑ *cascade08Ñ÷ *cascade08÷ì *cascade08ìï*cascade08ï— *cascade08—›*cascade08›Ö *cascade08ÖÙ *cascade08Ùš‘ *cascade08š‘œ‘*cascade08œ‘Ê‘ *cascade08Ê‘Î‘*cascade08Î‘¡’ *cascade08¡’¢’ *cascade08¢’Ï’ *cascade08Ï’Ò’*cascade08Ò’Ø“ *cascade08Ø“Ú“ *cascade08Ú“Ò” *cascade08Ò”Ö”*cascade08Ö”»– *cascade08»–¼–*cascade08¼–û– *cascade08û–ş– *cascade08ş–˜ *cascade08˜…˜*cascade08…˜ä˜ *cascade08ä˜å˜ *cascade08å˜İ™ *cascade08İ™á™*cascade08á™›š *cascade08›šœš*cascade08œšÆ› *cascade08Æ›È› *cascade08È›â› *cascade08â›Øœ *cascade08ØœÙœ *cascade08Ùœˆ *cascade08ˆŠ*cascade08ŠÉ *cascade08ÉÌ *cascade08ÌËŸ *cascade08ËŸÎŸ*cascade08ÎŸæŸ *cascade08æŸçŸ*cascade08çŸïŸ *cascade08ïŸóŸ*cascade08óŸŸ  *cascade08Ÿ £ *cascade08£ «  *cascade08« ­ *cascade08­ ¹  *cascade08¹ » *cascade08» Ã  *cascade08Ã Æ *cascade08Æ Î  *cascade08Î Ï *cascade08Ï ß *cascade08ß ä  *cascade08ä ú  ú û  *cascade08
+û ÿ ÿ €¡ *cascade08
+€¡”¡”¡œ¡ *cascade08œ¡Ä¡ Ä¡Æ¡ *cascade08Æ¡‹¤ ‹¤™¤ *cascade08™¤›¤ ›¤œ¤ *cascade08œ¤Ù¥ Ù¥Ü¥ *cascade08Ü¥º¦ º¦¾¦*cascade08¾¦‚§ ‚§Ÿ§ *cascade08Ÿ§ §  §¤§*cascade08¤§ó§ ó§ô§ *cascade08ô§˜© ˜©º© *cascade08º©ª ª‘ª *cascade08‘ª’ª *cascade08’ª±ª *cascade08±ª‰« ‰«Š« *cascade08Š«»« »«½«*cascade08½«À­ À­Á­ *cascade08Á­Ç® Ç®È® *cascade08È®³¯ ³¯·¯*cascade08·¯×¯ ×¯Û¯*cascade08Û¯§° §°©° *cascade08©°Î° Î°Ò°*cascade08Ò°„± „±†± *cascade08†±º± º±¼±*cascade08¼±² ²«² *cascade08«²¯²*cascade08¯²Á² Á²Å²*cascade08Å²…³ …³£³ *cascade08£³¤³ ¤³§³*cascade08§³ö³ ö³÷³ *cascade08÷³É´ É´Í´*cascade08Í´¤µ ¤µÅµ *cascade08Åµğµ ğµñµ*cascade08ñµŸ¶ Ÿ¶¡¶ *cascade08¡¶¥¶*cascade08¥¶Á¶ *cascade08Á¶º¸ º¸Ù¸ *cascade08Ù¸Ü¸ *cascade08Ü¸…¹ …¹ˆ¹*cascade08ˆ¹§º §ºªº *cascade08ªºŸ» Ÿ»£»*cascade08£»¼ ¼ƒ¼ *cascade08ƒ¼Î¼ Î¼Ï¼*cascade08Ï¼‘½ ‘½•½*cascade08•½Ö½ Ö½Ø½*cascade08Ø½ò½ ò½õ½ *cascade08õ½İ¾ İ¾ÿ¾ *cascade08ÿ¾³¿ ³¿µ¿ *cascade08µ¿ñ¿ ñ¿“À *cascade08“À‡Â ‡Â‰Â *cascade08‰ÂŠÂ *cascade08ŠÂ©Â *cascade08©ÂÃ Ã®Ã *cascade08®Ã±Ã *cascade08±ÃéÃ éÃëÃ*cascade08ëÃ‰Ä ‰Ä‰Ä*cascade08‰ÄİÄ İÄŞÄ *cascade08ŞÄóÄ óÄ’Å *cascade08’Å•Å*cascade08•Å¡Æ ¡ÆÁÆ *cascade08ÁÆÃÆ *cascade08ÃÆ¯Ç ¯Ç¯Ç*cascade08¯Ç¿Ç*cascade08¿ÇËÇ ËÇÌÇ *cascade08ÌÇÏÇ ÏÇçÇ *cascade08çÇéÇ*cascade08éÇêÇ *cascade08êÇëÇ*cascade08ëÇõÇ *cascade08õÇ„È *cascade08
+„È·È·È½È *cascade08½ÈÀÈ *cascade08ÀÈÁÈ*cascade08ÁÈ×È *cascade08×ÈÙÈ*cascade08ÙÈàÈ *cascade08"(020f6c9cd9b86273b0caf6233780c0a5beeeeef12†file:///c:/Users/maicon.bahls/Cocal/Recursos%20Humanos%20-%20PRIVADO/PROGRAMAS%20-%20MAICON/PHYTON/SISTEMA_BOLSAS_DEESTUDOS/index.html:{file:///c:/Users/maicon.bahls/Cocal/Recursos%20Humanos%20-%20PRIVADO/PROGRAMAS%20-%20MAICON/PHYTON/SISTEMA_BOLSAS_DEESTUDOS
