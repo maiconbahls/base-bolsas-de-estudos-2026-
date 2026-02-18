@@ -21,7 +21,7 @@ const MESES_SAFRA = [
 ];
 
 const COLUMN_MAP = {
-    'MATRICULA': ['MATRICULA', 'MATRÍCULA', 'MATRIUCLA', 'MAT', 'COD', 'CODIGO', 'ID', 'MATRICULA_COLABORADOR'],
+    'MATRICULA': ['MATRICULA', 'MATRÍCULA', 'MATRIUCLA', 'MAT', 'COD', 'CODIGO', 'ID', 'MATRICULA_COLABORADOR', 'MATRICULA_COLAB', 'NUMERO_MATRICULA', 'CODIGO_FUNCIONARIO'],
     'NOME': ['NOME', 'NOMES', 'COLABORADOR', 'FUNCIONARIO', 'NOME_COMPLETO', 'NM_FUNCIONARIO', 'NOME_FUNCIONARIO'],
     'DIRETORIA': ['DIRETORIA', 'DIRET', 'DIR', 'UNIDADE_DIRETORIA', 'DESC_DIRETORIA', 'DS_DIRETORIA', 'NOME_DIRETORIA', 'DESCRICAO_DIRETORIA', 'NM_DIRETORIA', 'DS_UNIDADE', 'DIRETORIA_UNIDADE', 'NOME_DA_DIRETORIA'],
     'CURSO': ['CURSO', 'PROGRAMA', 'NOME_CURSO', 'CURSO_FORMACAO', 'DESC_CURSO'],
@@ -31,6 +31,8 @@ const COLUMN_MAP = {
     'INICIO': ['INICIO', 'INÍCIO', 'DATA_INICIO', 'DT_INICIO', 'INGRESSO', 'DATA_ADMISSAO', 'DATA_CADASTRO', 'INICIO_CURSO'],
     'FIM': ['FIM', 'DATA_FIM', 'DT_FIM', 'PREVISAO_TERMINO', 'TERMINO', 'FIM_CURSO'],
     'SITUACAO': ['SITUACAO', 'SITUAÇÃO', 'STATUS', 'SIT', 'STATUS_BOLSA', 'SITUACAO_ATUAL'],
+    'CHECAGEM': ['CHECAGEM', 'VERIFICACAO', 'CONFERENCIA', 'STATUS_CHECAGEM'],
+    'DATA_CHECAGEM': ['DATA_CHECAGEM', 'DATA_STATUS', 'DATA_SITUACAO', 'DT_CHECAGEM', 'DATA CHECAGEM'],
     'COD_LOCAL': ['COD_LOCAL', 'CODIGO_LOCAL', 'COD LOCAL', 'CENTRO_CUSTO', 'COD_CC', 'CC', 'ESTRUTURA', 'COD._LOCAL']
 };
 
@@ -107,25 +109,25 @@ function refreshDashboard() {
     const dirSelection = document.getElementById('filtro-diretoria')?.value || 'todas';
     const norm = (s) => String(s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
 
-    // Filter only those who are active (ATIVO or REGULAR statuses)
-    const normalizedAtivos = bolsistas.filter(b => ['ATIVO', 'REGULAR'].includes(norm(b.situacao)));
+    // Filter list for KPIs: strictly based on user requirements
+    const strictlyAtivos = bolsistas.filter(b => norm(b.situacao) === 'ATIVO');
+    const ativosFiltrados = (dirSelection === 'todas') ? strictlyAtivos : strictlyAtivos.filter(b => norm(b.diretoria) === norm(dirSelection));
+    const ativosNaSafra = ativosFiltrados.filter(b => isBolsistaInSafra(b, safra));
 
-    // Fallback: if no ATIVO/REGULAR found, don't filter everything out (might be a mapping issue)
-    const baseList = (normalizedAtivos.length > 0) ? normalizedAtivos : bolsistas;
+    // KPI 1: Bolsistas Ativos (Strictly SITUACAO=ATIVO)
+    if (document.getElementById('kpi-ativos')) document.getElementById('kpi-ativos').textContent = ativosNaSafra.length;
 
-    const listByDir = (dirSelection === 'todas') ? baseList : baseList.filter(b => norm(b.diretoria) === norm(dirSelection));
-    const listFiltrada = listByDir.filter(b => isBolsistaInSafra(b, safra));
-
-    // KPI should show count of active individuals under the current filters
-    const ativos = listByDir;
-
-    if (document.getElementById('kpi-ativos')) document.getElementById('kpi-ativos').textContent = listFiltrada.length;
-
-    let pgsList = [...pagamentos];
-    if (dirSelection !== 'todas') {
-        const mats = new Set(listByDir.map(b => b.matricula));
-        pgsList = pgsList.filter(p => mats.has(p.matricula));
+    // KPI 2: Pendência Pagto (SITUACAO=ATIVO and CHECAGEM=REGULAR)
+    if (document.getElementById('kpi-novos')) {
+        const pendentes = ativosNaSafra.filter(b => norm(b.checagem) === 'REGULAR');
+        document.getElementById('kpi-novos').textContent = pendentes.length;
     }
+
+    // Investment Logic (Based on payments in filtered Safra/Diretoria)
+    const listForInv = (dirSelection === 'todas') ? bolsistas : bolsistas.filter(b => norm(b.diretoria) === norm(dirSelection));
+    const matsInDir = new Set(listForInv.map(b => b.matricula));
+
+    let pgsList = pagamentos.filter(p => matsInDir.has(p.matricula));
     if (safra !== 'todas') {
         const [aI, aF] = safra.split('/').map(Number);
         pgsList = pgsList.filter(p => (p.ano === aI && p.mes >= 4) || (p.ano === aF && p.mes <= 3));
@@ -134,12 +136,10 @@ function refreshDashboard() {
     const totalInv = pgsList.reduce((acc, p) => acc + (parseFloat(p.valor) || 0), 0);
     if (document.getElementById('kpi-ticket')) document.getElementById('kpi-ticket').textContent = formatBRL(totalInv);
 
-    const m = new Date().getMonth() + 1, a = new Date().getFullYear();
-    const matsPagas = new Set(pagamentos.filter(p => p.mes === m && p.ano === a).map(p => p.matricula));
-    if (document.getElementById('kpi-novos')) document.getElementById('kpi-novos').textContent = ativos.filter(b => !matsPagas.has(b.matricula)).length;
-
-    renderCharts(listByDir, safra);
-    updateDirStats(listByDir, pagamentos, safra);
+    // Render Charts and other stats
+    renderCharts(ativosFiltrados, safra);
+    updateDirStats(ativosFiltrados, pagamentos, safra);
+    renderSituacaoTable(ativosFiltrados, safra);
 
     const dadosPorMes = {};
     pgsList.forEach(p => {
@@ -162,7 +162,7 @@ function refreshDashboard() {
         if (typeof renderTabelaEvolucao === 'function') renderTabelaEvolucao();
     }
 
-    renderSituacaoTable(listByDir, safra);
+    renderSituacaoTable(ativosFiltrados, safra);
 }
 
 function renderCharts(baseList, safra) {
@@ -223,7 +223,7 @@ function renderCharts(baseList, safra) {
                         backgroundColor: '#76B82A',
                         borderRadius: 6,
                         barPercentage: 0.9,
-                        categoryPercentage: 0.8,
+                        categoryPercentage: 0.9,
                         order: 2,
                         yAxisID: 'y',
                         datalabels: {
@@ -240,28 +240,13 @@ function renderCharts(baseList, safra) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                layout: { padding: { top: 40, left: 10, right: 10, bottom: 0 } },
+                layout: { padding: { top: 30, left: 10, right: 10, bottom: 0 } },
                 interaction: {
                     mode: 'index',
                     intersect: false,
                 },
                 plugins: {
-                    legend: {
-                        position: 'top',
-                        align: 'center',
-                        labels: {
-                            usePointStyle: true,
-                            pointStyle: 'rectRounded',
-                            boxWidth: 16,
-                            padding: 10,
-                            font: {
-                                size: 12,
-                                weight: '700',
-                                family: "'Inter', sans-serif"
-                            },
-                            color: '#64748b'
-                        }
-                    },
+                    legend: { display: false },
                     datalabels: {
                         display: true
                     },
@@ -294,7 +279,7 @@ function renderCharts(baseList, safra) {
                         grid: { display: false },
                         suggestedMax: (context) => {
                             const max = Math.max(...context.chart.data.datasets[1].data);
-                            return max * 1.25; // Space for labels
+                            return max * 1.08; // Even more aggressive stretching
                         }
                     },
                     y1: {
@@ -305,7 +290,7 @@ function renderCharts(baseList, safra) {
                         grid: { display: false },
                         suggestedMax: (context) => {
                             const max = Math.max(...context.chart.data.datasets[0].data);
-                            return max * 1.5; // Positions the line well above overlapping labels
+                            return max * 2.2; // Positions the line more towards the middle
                         }
                     }
                 }
@@ -453,11 +438,18 @@ function processBolsasBase(data) {
         const o = {}; for (const [k, v] of Object.entries(row)) o[normalizeCol(k)] = v;
         const mat = String(o.MATRICULA || '').trim().replace(/^0+/, '').split('.')[0].toUpperCase();
         return {
-            matricula: mat, nome: String(o.NOME || '').trim(), diretoria: String(o.DIRETORIA || 'SEM DIRETORIA').toUpperCase().trim(),
-            situacao: String(o.SITUACAO || 'REGULAR').toUpperCase().trim(), valor_reembolso: parseBRL(o.VALOR_REEMBOLSO),
-            cod_local: String(o.COD_LOCAL || '').trim(), checagem: String(o.CHECAGEM || '').trim(),
-            inicio: o.INICIO instanceof Date ? o.INICIO : null, fim: o.FIM instanceof Date ? o.FIM : null,
-            curso: String(o.CURSO || '').trim(), nivel: String(o.NIVEL || '').trim(),
+            matricula: mat,
+            nome: String(o.NOME || '').trim(),
+            diretoria: String(o.DIRETORIA || 'SEM DIRETORIA').toUpperCase().trim(),
+            situacao: String(o.SITUACAO || '').toUpperCase().trim(),
+            checagem: String(o.CHECAGEM || 'REGULAR').toUpperCase().trim(),
+            valor_reembolso: parseBRL(o.VALOR_REEMBOLSO),
+            cod_local: String(o.COD_LOCAL || '').trim(),
+            data_checagem: o.DATA_CHECAGEM instanceof Date ? o.DATA_CHECAGEM : null,
+            inicio: o.INICIO instanceof Date ? o.INICIO : null,
+            fim: o.FIM instanceof Date ? o.FIM : null,
+            curso: String(o.CURSO || '').trim(),
+            nivel: String(o.NIVEL || '').trim(),
             ies: String(o.INSTITUICAO || o.IES || '').trim()
         };
     }).filter(b => b.matricula);
@@ -557,25 +549,39 @@ function loadFromStorage() {
 
 
 function filterTableByCategory(category) {
-    navigateTo('tabela');
+    const safra = document.getElementById('filtro-safra')?.value || 'todas';
+    const dirSelection = document.getElementById('filtro-diretoria')?.value || 'todas';
     const norm = (s) => String(s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
 
-    let filtered = bolsistas;
-    if (category === 'ativos') {
-        filtered = bolsistas.filter(b => norm(b.situacao) === 'ATIVO');
-    } else if (category === 'pendentes') {
-        const m = new Date().getMonth() + 1, a = new Date().getFullYear();
-        const matsPagas = new Set(pagamentos.filter(p => p.mes === m && p.ano === a).map(p => p.matricula));
-        filtered = bolsistas.filter(b => norm(b.situacao) === 'ATIVO' && !matsPagas.has(b.matricula));
+    navigateTo('tabela');
+
+    // Filter based on same logic as cards
+    let base = bolsistas;
+    if (dirSelection !== 'todas') {
+        base = base.filter(b => norm(b.diretoria) === norm(dirSelection));
     }
 
-    // Update search placeholder to reflect filter
+    // Apply Safra filter as the cards do
+    let filtered = base.filter(b => isBolsistaInSafra(b, safra));
+
+    if (category === 'ativos') {
+        filtered = filtered.filter(b => norm(b.situacao) === 'ATIVO');
+    } else if (category === 'pendentes') {
+        // Match KPI 2: Ativo + Regular
+        filtered = filtered.filter(b => norm(b.situacao) === 'ATIVO' && norm(b.checagem) === 'REGULAR');
+    }
+
+    // Update search UI
     const searchInput = document.getElementById('searchTerm');
     if (searchInput) {
         searchInput.value = '';
-        searchInput.placeholder = category === 'todos' ? 'Pesquisar por nome, matrícula ou diretoria...' :
-            (category === 'ativos' ? 'Filtrando apenas ATIVOS...' : 'Filtrando PENDÊNCIAS de pagamento...');
+        searchInput.placeholder = category === 'todos' ? 'Pesquisar...' :
+            (category === 'ativos' ? 'LISTA: BOLSISTAS ATIVOS' : 'LISTA: PENDÊNCIA PAGTO');
     }
+
+    // Sync table directory filter to match dashboard
+    const tableDirFilter = document.getElementById('filtro-tabela-diretoria');
+    if (tableDirFilter) tableDirFilter.value = dirSelection;
 
     renderTable(filtered);
 }
@@ -600,8 +606,39 @@ function renderTable(listParam) {
         list = list.filter(b => (b.nome + b.matricula).toLowerCase().includes(term));
     }
 
+    const safra = document.getElementById('filtro-safra')?.value || 'todas';
+    const [aI, aF] = (safra !== 'todas') ? safra.split('/').map(Number) : [0, 0];
+
     tbody.innerHTML = list.length === 0 ? '<tr><td colspan="6" class="p-10 text-center text-slate-400 font-bold">Nenhum dado encontrado para os filtros aplicados...</td></tr>' :
-        list.map(b => `<tr class="hover:bg-slate-50 cursor-pointer border-b border-slate-50" onclick="openProfile('${b.matricula}')"><td class="px-6 py-4"><div class="font-black text-slate-800 text-sm uppercase">${b.nome}</div><div class="text-[10px] text-slate-400 font-bold">${b.matricula}</div></td><td class="px-6 py-4 uppercase text-[10px] font-bold text-slate-500">${b.diretoria}</td><td class="px-6 py-4"><div class="text-[10px] font-black text-slate-700 uppercase">${b.nivel || '---'}</div><div class="text-[9px] text-slate-400 font-medium truncate max-w-[150px]">${b.curso || '---'}</div></td><td class="px-6 py-4 text-[10px] font-bold text-slate-500 text-center">-</td><td class="px-6 py-4 text-sm font-black text-slate-800">${formatBRL(b.valor_reembolso)}</td><td class="px-6 py-4"><span class="badge ${['ATIVO', 'REGULAR'].includes(String(b.situacao).toUpperCase()) ? 'badge-active' : 'badge-inactive'}">${b.situacao}</span></td></tr>`).join('');
+        list.map(b => {
+            // Calcular total na Safra para este colaborador (para bater com o perfil)
+            let listPgs = pagamentos.filter(p => p.matricula === b.matricula);
+            if (safra !== 'todas') {
+                listPgs = listPgs.filter(p => (p.ano === aI && p.mes >= 4) || (p.ano === aF && p.mes <= 3));
+            }
+            const totalSafra = listPgs.reduce((acc, p) => acc + (p.valor || 0), 0);
+
+            // Se totalSafra for 0 e for 'todas', use o valor base como indicativo
+            const vDesc = (safra === 'todas' && totalSafra === 0) ? (b.valor_reembolso || 0) : totalSafra;
+
+            return `
+                <tr class="hover:bg-slate-50 cursor-pointer border-b border-slate-50" onclick="openProfile('${b.matricula}')">
+                    <td class="px-6 py-4">
+                        <div class="font-black text-slate-800 text-sm uppercase">${b.nome}</div>
+                        <div class="text-[10px] text-slate-400 font-bold">${b.matricula}</div>
+                    </td>
+                    <td class="px-6 py-4 uppercase text-[10px] font-bold text-slate-500">${b.diretoria}</td>
+                    <td class="px-6 py-4">
+                        <div class="text-[10px] font-black text-slate-700 uppercase">${b.nivel || '---'}</div>
+                        <div class="text-[9px] text-slate-400 font-medium truncate max-w-[150px]">${b.curso || '---'}</div>
+                    </td>
+                    <td class="px-6 py-4 text-[10px] font-bold text-slate-500 text-center">-</td>
+                    <td class="px-6 py-4 text-sm font-black text-slate-800">${formatBRL(vDesc)}</td>
+                    <td class="px-6 py-4">
+                        <span class="badge ${['ATIVO', 'REGULAR'].includes(String(b.situacao).toUpperCase()) ? 'badge-active' : 'badge-inactive'}">${b.situacao}</span>
+                    </td>
+                </tr>`;
+        }).join('');
 
     if (document.getElementById('tableCountBadge')) document.getElementById('tableCountBadge').textContent = list.length;
 }
@@ -610,6 +647,12 @@ function openProfile(mat) {
     const b = bolsistas.find(x => x.matricula === mat);
     if (!b) return;
     navigateTo('perfil');
+    console.log('Abrindo perfil Matrícula:', mat);
+    console.log('Dados do Bolsista:', b);
+
+    // Filtrar pagamentos para o perfil
+    const pgsProfile = pagamentos.filter(p => p.matricula === mat);
+    console.log('Pagamentos perfil:', mat, pgsProfile);
 
     // Basic Info
     document.getElementById('profile-name').textContent = b.nome;
@@ -653,15 +696,15 @@ function openProfile(mat) {
     }
 
     // Payments Logic
-    const pgs = pagamentos.filter(p => p.matricula === mat).sort((a, b) => (b.ano * 100 + b.mes) - (a.ano * 100 + a.mes));
-    const total = pgs.reduce((acc, p) => acc + p.valor, 0);
+    const pgsSorted = [...pgsProfile].sort((a, b) => (b.ano * 100 + b.mes) - (a.ano * 100 + a.mes));
+    const total = pgsSorted.reduce((acc, p) => acc + p.valor, 0);
     document.getElementById('profile-total-reembolsado').textContent = formatBRL(total);
 
     // Payment History Table
     const histTable = document.getElementById('profile-history-table');
     if (histTable) {
-        histTable.innerHTML = pgs.length === 0 ? '<tr><td colspan="4" class="p-8 text-center text-slate-400 italic">Nenhum pagamento registrado</td></tr>' :
-            pgs.map(p => `
+        histTable.innerHTML = pgsSorted.length === 0 ? '<tr><td colspan="4" class="p-8 text-center text-slate-400 italic">Nenhum pagamento registrado</td></tr>' :
+            pgsSorted.map(p => `
                 <tr class="border-b border-slate-50 hover:bg-slate-50">
                     <td class="py-4 px-6 text-[11px] font-bold text-slate-600 uppercase">${MESES_ABR[p.mes - 1]}/${String(p.ano).substring(2)}</td>
                     <td class="py-4 px-6 text-[11px] font-black text-slate-800">${formatBRL(p.valor)}</td>
@@ -675,7 +718,7 @@ function openProfile(mat) {
     const canvas = destroyChart('chartProfileEvolution');
     if (canvas) {
         // Group by month for the last 12 months or all payments
-        const last12 = [...pgs].reverse().slice(-12);
+        const last12 = [...pgsSorted].reverse().slice(-12);
         charts.chartProfileEvolution = new Chart(canvas, {
             type: 'line',
             data: {
@@ -697,18 +740,29 @@ function openProfile(mat) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: { padding: { top: 35, left: 10, right: 10, bottom: 0 } },
                 plugins: {
                     legend: { display: false },
                     datalabels: {
                         align: 'top',
+                        anchor: 'end',
+                        offset: 4,
                         formatter: (v) => formatBRL(v),
-                        font: { size: 9, weight: '900' },
+                        font: { size: 10, weight: '900' },
                         color: '#76B82A'
                     }
                 },
                 scales: {
                     x: { grid: { display: false }, ticks: { font: { size: 9, weight: '700' }, color: '#94a3b8' } },
-                    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { display: false } }
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#f1f5f9' },
+                        ticks: { display: false },
+                        suggestedMax: (ctx) => {
+                            const max = Math.max(...ctx.chart.data.datasets[0].data);
+                            return max > 0 ? max * 1.25 : 100;
+                        }
+                    }
                 }
             }
         });
@@ -724,10 +778,83 @@ function toggleSituacaoView() {
 function renderSituacaoTable(list, safra) {
     const body = document.getElementById('body-sit-mensal');
     if (!body) return;
-    const filtered = (list || bolsistas).filter(b => isBolsistaInSafra(b, (safra || 'todas')));
-    const counts = {};
-    filtered.forEach(b => { const s = (b.checagem || b.situacao || 'OUTROS').toUpperCase(); counts[s] = (counts[s] || 0) + 1; });
-    body.innerHTML = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).map(k => `<tr class="hover:bg-slate-50"><td class="py-2.5 px-4 font-bold text-slate-700 uppercase text-[10px]">${k}</td><td class="py-2.5 px-4 text-right font-black text-slate-800">${counts[k]}</td></tr>`).join('');
+
+    const safraFiltro = safra || document.getElementById('filter-safra')?.value || 'todas';
+    const filtered = (list || bolsistas).filter(b => isBolsistaInSafra(b, safraFiltro));
+
+    // Determinar os meses da Safra selecionada
+    let mesesSafra = [];
+    if (safraFiltro === 'todas') {
+        mesesSafra = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3]; // Padrão
+    } else {
+        mesesSafra = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3];
+    }
+
+    const situacoes = Array.from(new Set(filtered.map(b => (b.checagem || b.situacao || 'OUTROS').toUpperCase()))).sort();
+
+    // Obter mês atual para colocar "ATIVOS" / "REGULARES" no mês correto se não tiver data
+    const hoje = new Date();
+    const mesAtual = hoje.getMonth() + 1;
+
+    let html = '';
+    situacoes.forEach(sit => {
+        let totalLinha = 0;
+        let colunasHtml = '';
+
+        mesesSafra.forEach(m => {
+            const count = filtered.filter(b => {
+                const s = (b.checagem || b.situacao || 'OUTROS').toUpperCase();
+                if (s !== sit) return false;
+
+                // Se for REGULAR ou ATIVO, e não tiver data de checagem, joga no mês atual
+                if (['REGULAR', 'ATIVO'].includes(s)) {
+                    if (!b.data_checagem) return m === mesAtual;
+                }
+
+                // Se tiver data de checagem, usa o mês dela
+                if (b.data_checagem) {
+                    return (b.data_checagem.getMonth() + 1) === m;
+                }
+
+                // Se for CONCLUIDO, CANCELADO, etc., e tiver data FIM, usa o mês de FIM
+                if (['CONCLUIDO', 'CANCELADO', 'DEMITIDO', 'BLOQUEIO', 'TRANSFERENCIA'].includes(s)) {
+                    if (b.fim) return (b.fim.getMonth() + 1) === m;
+                }
+
+                // Fallback: se não tiver data nenhuma e for o mês atual
+                return m === mesAtual;
+            }).length;
+
+            totalLinha += count;
+            colunasHtml += `<td class="py-1 px-1 text-center font-bold ${count > 0 ? 'text-slate-800' : 'text-slate-200'}">${count > 0 ? count : '-'}</td>`;
+        });
+
+        html += `
+            <tr class="hover:bg-slate-50 border-b border-slate-50 transition-colors">
+                <td class="py-1 px-3 font-black text-slate-700 text-[10px] uppercase sticky left-0 bg-white z-10 shadow-[2px_0_5px_rgba(0,0,0,0.02)]">${sit}</td>
+                ${colunasHtml}
+                <td class="py-1 px-3 text-right font-black text-slate-900 bg-slate-50/30">${totalLinha}</td>
+            </tr>
+        `;
+    });
+
+    body.innerHTML = html;
+}
+
+function togglePresentationMode() {
+    const isPresentation = document.body.classList.toggle('presentation-mode');
+    const header = document.getElementById('app-header');
+    const btn = document.getElementById('btn-presentation');
+
+    if (isPresentation) {
+        if (header) header.style.display = 'none';
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-compress"></i><span>Sair da Apresentação</span>';
+        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    } else {
+        if (header) header.style.display = 'flex';
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-expand"></i><span>Modo Apresentação</span>';
+        if (document.exitFullscreen) document.exitFullscreen();
+    }
 }
 
 function toggleEvolucaoView() {
