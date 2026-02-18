@@ -194,11 +194,6 @@
                                                     class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Pagamentos</span>
                                             </div>
                                         </div>
-                                        <button onclick="toggleEvolucaoView()" class="btn-toggle-view"
-                                            id="btn-toggle-evolucao">
-                                            <i class="fa-solid fa-table"></i>
-                                            <span>Ver Tabela</span>
-                                        </button>
                                     </div>
                                 </div>
 
@@ -206,45 +201,7 @@
                                     <canvas id="chartValorVsQtd"></canvas>
                                 </div>
 
-                                <div id="container-evolucao-qtd" class="h-[380px] hidden">
-                                    <canvas id="chartQtdEvolucao"></canvas>
-                                </div>
 
-                                <div id="container-evolucao-tabela" class="hidden overflow-x-auto">
-                                    <table class="w-full text-sm border-collapse">
-                                        <thead>
-                                            <tr class="bg-gradient-to-r from-[#76B82A] to-[#5A902C] text-white">
-                                                <th
-                                                    class="py-3 px-4 text-left font-black uppercase text-xs tracking-wider">
-                                                    Mês</th>
-                                                <th
-                                                    class="py-3 px-4 text-right font-black uppercase text-xs tracking-wider">
-                                                    Valor Total (R$)</th>
-                                                <th
-                                                    class="py-3 px-4 text-right font-black uppercase text-xs tracking-wider">
-                                                    Quantidade</th>
-                                                <th
-                                                    class="py-3 px-4 text-right font-black uppercase text-xs tracking-wider">
-                                                    Ticket Médio</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="tableEvolucaoMensal" class="divide-y divide-slate-100">
-                                            <tr>
-                                                <td colspan="4" class="py-10 text-center text-slate-400 italic">
-                                                    Carregando dados...
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                        <tfoot>
-                                            <tr class="bg-slate-100 font-black text-slate-800">
-                                                <td class="py-3 px-4 text-left uppercase text-xs">TOTAL GERAL</td>
-                                                <td id="totalValor" class="py-3 px-4 text-right text-lg">R$ 0,00</td>
-                                                <td id="totalQtd" class="py-3 px-4 text-right text-lg">0</td>
-                                                <td id="totalMedia" class="py-3 px-4 text-right text-lg">R$ 0,00</td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
                             </div>
 
                             <div class="card-white border border-slate-100/50 shadow-sm">

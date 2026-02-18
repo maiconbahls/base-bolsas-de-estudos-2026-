@@ -209,10 +209,6 @@ function refreshDashboard() {
         if (document.getElementById('totalMedia')) document.getElementById('totalMedia').textContent = formatBRL(totalQ > 0 ? totalV / totalQ : 0);
     }
 
-    if (document.getElementById('container-evolucao-grafico')?.classList.contains('hidden')) {
-        if (typeof renderTabelaEvolucao === 'function') renderTabelaEvolucao();
-    }
-
     renderSituacaoTable(ativosFiltrados, safra);
 }
 
@@ -268,55 +264,53 @@ function renderCharts(baseList, safra) {
         });
 
         charts.chartValorVsQtd = new Chart(canvasEv, {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: keys.map(k => `${MESES_ABR[parseInt(k.split('-')[1]) - 1]}/${k.split('-')[0].substring(2)}`),
                 datasets: [
                     {
                         label: 'Pagamentos Realizados',
-                        type: 'line',
                         data: keys.map(k => dadosMes[k].q),
                         borderColor: '#1e293b',
-                        backgroundColor: '#1e293b',
-                        borderWidth: 3,
+                        backgroundColor: 'transparent',
+                        borderWidth: 4,
                         pointBackgroundColor: '#1e293b',
                         pointBorderColor: '#ffffff',
                         pointBorderWidth: 2,
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
                         fill: false,
-                        tension: 0.3,
+                        tension: 0.4,
                         order: 1,
                         yAxisID: 'y1',
                         datalabels: {
                             align: 'top',
                             offset: 6,
                             formatter: (v) => v > 0 ? v : '',
-                            font: { size: 10, weight: '900' },
+                            font: { size: 11, weight: '900' },
                             color: '#1e293b'
                         }
                     },
                     {
                         label: 'Ativos (Headcount)',
-                        type: 'line',
                         data: keys.map(k => dadosMes[k].hc),
                         borderColor: '#76B82A',
                         backgroundColor: '#76B82A15',
-                        borderWidth: 3,
+                        borderWidth: 4,
                         pointBackgroundColor: '#76B82A',
                         pointBorderColor: '#ffffff',
                         pointBorderWidth: 2,
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
                         fill: true,
-                        tension: 0.3,
+                        tension: 0.4,
                         order: 2,
                         yAxisID: 'y',
                         datalabels: {
                             align: 'bottom',
                             offset: 6,
                             formatter: (v) => v > 0 ? v : '',
-                            font: { size: 10, weight: '900' },
+                            font: { size: 11, weight: '900' },
                             color: '#76B82A'
                         }
                     }
@@ -325,75 +319,45 @@ function renderCharts(baseList, safra) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                layout: { padding: { top: 40, left: 10, right: 10, bottom: 0 } },
+                layout: { padding: { top: 40, left: 10, right: 10, bottom: 20 } },
                 plugins: {
                     legend: { display: false },
                     datalabels: { display: true },
-                    tooltip: { enabled: true }
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: '#1e293b',
+                        padding: 12,
+                        cornerRadius: 8
+                    }
                 },
                 scales: {
-                    x: { grid: { display: false }, ticks: { font: { weight: '600' } } },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { weight: '700', size: 11 }, color: '#64748b' }
+                    },
                     y: {
                         display: false,
                         beginAtZero: true,
-                        suggestedMax: (ctx) => Math.max(...ctx.chart.data.datasets[1].data) * 1.2
+                        suggestedMax: (ctx) => {
+                            const max = Math.max(...ctx.chart.data.datasets[1].data);
+                            return max > 0 ? max * 1.5 : 10;
+                        }
                     },
                     y1: {
                         display: false,
                         beginAtZero: true,
-                        suggestedMax: (ctx) => Math.max(...ctx.chart.data.datasets[0].data) * 2.5
+                        suggestedMax: (ctx) => {
+                            const max = Math.max(...ctx.chart.data.datasets[0].data);
+                            return max > 0 ? max * 3.5 : 10;
+                        }
                     }
                 }
             }
         });
     }
 
-    const canvasQtd = destroyChart('chartQtdEvolucao');
-    if (canvasQtd) {
-        // Reuse data calculated above
-        const dadosMes = {};
-        const relevantMats = new Set(baseList.map(b => b.matricula));
-        let pgsGraf = pagamentos.filter(p => relevantMats.has(p.matricula));
-        if (safra !== 'todas') {
-            const [aI, aF] = safra.split('/').map(Number);
-            pgsGraf = pgsGraf.filter(p => (p.ano === aI && p.mes >= 4) || (p.ano === aF && p.mes <= 3));
-        }
-
-        pgsGraf.forEach(p => {
-            const key = p.ano + '-' + String(p.mes).padStart(2, '0');
-            if (!dadosMes[key]) dadosMes[key] = { q: 0 };
-            dadosMes[key].q++;
-        });
-
-        const keys = Object.keys(dadosMes).sort();
-        charts.chartQtdEvolucao = new Chart(canvasQtd, {
-            type: 'line',
-            data: {
-                labels: keys.map(k => `${MESES_ABR[parseInt(k.split('-')[1]) - 1]}/${k.split('-')[0].substring(2)}`),
-                datasets: [{
-                    label: 'Quantidade de Pagamentos',
-                    data: keys.map(k => dadosMes[k].q),
-                    borderColor: '#1e293b',
-                    backgroundColor: '#1e293b22',
-                    borderWidth: 4,
-                    pointRadius: 6,
-                    pointBackgroundColor: '#1e293b',
-                    fill: true,
-                    tension: 0.3,
-                    datalabels: { align: 'top', font: { weight: '900' } }
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, grid: { display: false }, ticks: { display: false } },
-                    x: { grid: { display: false } }
-                }
-            }
-        });
-    }
 
     const canvasSit = destroyChart('chartSituacoes');
     if (canvasSit) {
@@ -938,30 +902,7 @@ function openProfile(mat) {
     }
 }
 
-// Função toggle unificada (Removida a duplicata do fim do arquivo)
-function toggleEvolucaoView() {
-    const g1 = document.getElementById('container-evolucao-grafico');
-    const g2 = document.getElementById('container-evolucao-qtd');
-    const t = document.getElementById('container-evolucao-tabela');
-    const b = document.getElementById('btn-toggle-evolucao');
 
-    if (!g1 || !t || !b) return;
-
-    // Se estiver mostrando o gráfico principal, vai para a tabela
-    if (!g1.classList.contains('hidden')) {
-        g1.classList.add('hidden');
-        if (g2) g2.classList.add('hidden');
-        t.classList.remove('hidden');
-        b.innerHTML = '<i class="fa-solid fa-chart-line"></i><span>Ver Gráfico</span>';
-        if (typeof renderTabelaEvolucao === 'function') renderTabelaEvolucao();
-    } else {
-        // Se estiver na tabela, volta para o gráfico principal
-        t.classList.add('hidden');
-        if (g2) g2.classList.add('hidden');
-        g1.classList.remove('hidden');
-        b.innerHTML = '<i class="fa-solid fa-table"></i><span>Ver Tabela</span>';
-    }
-}
 
 function toggleSituacaoView() {
     const g = document.getElementById('container-grafico-sit'), t = document.getElementById('container-tabela-sit'), b = document.getElementById('btn-toggle-sit');
